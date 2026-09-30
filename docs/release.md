@@ -1,12 +1,12 @@
 # Release procedure
 
-The initial implementation stops at a reviewed pull request. Merge and npm publication require Lorran's explicit Gate 2 approval. Do not publish this candidate automatically.
+Every release must use a reviewed commit on main and explicit maintainer approval for publication. The protected `release` environment is the final publishing gate; merging a pull request alone does not publish a package.
 
 ## Before the release
 
 1. Confirm the npm account controlled by the maintainer, package name availability, 2FA and permissions. Do not infer the npm username from GitHub.
 2. Verify `npm run check` and all CI jobs on the reviewed commit, including Windows/macOS and Node 22.14/24.
-3. Change README candidate notices and date the changelog as part of the reviewed release commit.
+3. Prepare installation documentation and a dated changelog in a release pull request. Merge those changes when ready to publish; do not announce availability before the registry check succeeds.
 4. Confirm the GitHub `release` environment requires Lorran's review; verify the protected tag/commit is on main and its package version matches the tag.
 5. Configure npm trusted publishing for owner `LorranHippolyte`, repo `uiport`, workflow `publish.yml`, environment `release`. Permit direct `npm publish` if using the provided workflow. `repository.url` must match the repository.
 
@@ -24,6 +24,6 @@ The bootstrap is not the official release and does not have the same provenance 
 
 ## Verify and announce
 
-Confirm npm version, dist-tag and provenance; exercise `npx uiport@0.1.0` capture/serve/validate in a clean consumer directory, not only help. Create the corresponding GitHub release from the same tag. Use the prepared launch kit after receiving authorization to send community messages.
+Confirm the registry reports the intended version under `latest`, the expected maintainer and repository, and an attestation bound to the reviewed GitHub commit. Then exercise `npx uiport@0.1.0` capture/serve/validate in a clean consumer directory, not only help. Create the corresponding GitHub release from the same tag. Use the prepared launch kit after receiving authorization to send community messages.
 
 Each npm name/version pair is immutable after publication. Stop on mismatched version, failing checks or missing review; do not reuse a published version.

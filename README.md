@@ -6,8 +6,6 @@ UIport captures a rendered section as editable HTML, original CSS and local asse
 
 [Português brasileiro](README.pt-BR.md) · [Support matrix](docs/support.md) · [Contributing](CONTRIBUTING.md)
 
-> **Release candidate:** the first npm release is pending. Use the source checkout below until `uiport@0.1.0` is published.
-
 ![An original responsive section created for UIport](docs/demo.png)
 
 ## What you get
@@ -24,7 +22,7 @@ UIport keeps original CSS conservatively, including rules outside the selected s
 
 Requires **Node.js 22.14+**; Node 24 LTS recommended. Chromium is installed explicitly, or UIport can use your installed Chrome/Edge. Your existing browser sessions are not imported.
 
-After the npm release:
+Install from npm:
 
 ```sh
 npx uiport@0.1.0 browser install

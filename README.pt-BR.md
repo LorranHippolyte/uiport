@@ -6,8 +6,6 @@ O UIport captura uma seção renderizada como HTML editável, CSS original e ass
 
 [English](README.md) · [Matriz de suporte](docs/support.md) · [Contribuição](CONTRIBUTING.md)
 
-> **Candidato a release:** a primeira publicação no npm está pendente. Até `uiport@0.1.0` ser publicado, use o código do repositório.
-
 ![Seção responsiva autoral criada para o UIport](docs/demo.png)
 
 ## O que você recebe
@@ -24,7 +22,7 @@ O CSS é preservado de forma conservadora, incluindo regras fora da seção esco
 
 Requer **Node.js 22.14+**; recomendamos Node 24 LTS. O Chromium é instalado explicitamente, ou a ferramenta usa Chrome/Edge já disponível. Sessões pessoais do navegador não são importadas.
 
-Depois da publicação no npm:
+Instale pelo npm:
 
 ```sh
 npx uiport@0.1.0 browser install
