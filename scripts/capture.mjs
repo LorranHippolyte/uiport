@@ -194,7 +194,13 @@ export async function capture(options) {
             (["use", "image"].includes(node.tagName) &&
               ["href", "xlink:href"].includes(attr.name))
           )
-            attr.value = await assets.localize(attr.value, primary.baseUrl);
+            attr.value = await assets.localize(
+              attr.value,
+              primary.baseUrl,
+              node.tagName === "script" && attr.name === "src"
+                ? "script"
+                : undefined,
+            );
           if (attr.name === "srcset") {
             const candidates = [];
             for (const item of parseSrcset(attr.value))

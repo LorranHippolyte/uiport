@@ -35,25 +35,76 @@ function missingSelectors({ snapshot, rules }) {
             result.push({ rule: rule.id, selector, id });
         }
       } catch {
-        // Relative/nested selectors are not independently matchable here.
+        // Browser-specific selectors may not be queryable.
       }
     }
   }
   return result;
 }
 
+// CSS nesting uses the maximum specificity of the parent's selector list.
+// Expand nesting tokens only outside strings/attributes and preserve escapes.
+function resolveSelector(selector, parent) {
+  let result = "",
+    quote = "",
+    brackets = 0,
+    nested = false;
+  for (let i = 0; i < selector.length; i++) {
+    const char = selector[i];
+    if (char === "\\") {
+      result += char + (selector[++i] || "");
+      continue;
+    }
+    if (quote) {
+      if (char === quote) quote = "";
+    } else if (char === '"' || char === "'") quote = char;
+    else if (char === "[") brackets++;
+    else if (char === "]") brackets--;
+    else if (char === "&" && brackets === 0) {
+      result += parent;
+      nested = true;
+      continue;
+    }
+    result += char;
+  }
+  return nested ? result : `${parent} ${result}`;
+}
+function selectorsFor(rule) {
+  let parent = rule.parent;
+  while (parent && parent.type !== "rule") parent = parent.parent;
+  if (!parent) return rule.selectors;
+  const context = `:is(${selectorsFor(parent).join(", ")})`;
+  return rule.selectors.map((selector) => resolveSelector(selector, context));
+}
+
 export function contextualCss(stylesheets) {
   const roots = stylesheets.map((text) => postcss.parse(text));
   const rules = [];
   const descriptors = [];
-  for (const root of roots)
-    root.walkRules((rule) => {
-      if (!rule.nodes.some((n) => n.type === "decl" && n.prop.startsWith("--")))
-        return;
-      const id = rules.length;
-      rules.push(rule);
-      descriptors.push({ id, selectors: rule.selectors });
-    });
+  function visit(container, owner) {
+    if (container.type === "rule") owner = container;
+    let declarations = [];
+    const flush = () => {
+      if (owner && declarations.length) {
+        const id = rules.length;
+        rules.push({ container, declarations });
+        descriptors.push({ id, selectors: selectorsFor(owner) });
+      }
+      declarations = [];
+    };
+    // Preserve declaration order around nested rules. A conditional at-rule
+    // may contain declarations applying implicitly to its enclosing selector.
+    for (const node of container.nodes || []) {
+      if (node.type === "decl" && node.prop.startsWith("--"))
+        declarations.push(node);
+      else if (node.nodes) {
+        flush();
+        visit(node, owner);
+      }
+    }
+    flush();
+  }
+  for (const root of roots) visit(root, null);
   const missing = new Map();
   return {
     async observe(page, snapshot) {
@@ -65,15 +116,52 @@ export function contextualCss(stylesheets) {
         missing.set(`${item.rule}|${item.selector}|${item.id}`, item);
     },
     render() {
-      for (const { rule: id, selector, id: element } of missing.values()) {
-        const original = rules[id];
-        const fallback = original.clone({
-          selector: `:is(${selector}, :where([data-uiport-id="${element}"]))`,
+      const anchorFor = (container) => {
+        let anchor = container;
+        for (let parent = container.parent; parent; parent = parent.parent)
+          if (parent.type === "rule") anchor = parent;
+        return anchor;
+      };
+      const affected = new Set(
+        [...missing.values()].map((item) =>
+          anchorFor(rules[item.rule].container),
+        ),
+      );
+      const tails = new Map();
+      // Replay every custom declaration of an affected style block, including
+      // selectors that still match. Otherwise hoisting only a missing selector
+      // would incorrectly override a later nested rule of equal specificity.
+      for (const [
+        id,
+        { container: original, declarations },
+      ] of rules.entries()) {
+        const anchor = anchorFor(original);
+        if (!affected.has(anchor)) continue;
+        const selectors = descriptors[id].selectors.map((selector) => {
+          const elements = [...missing.values()].filter(
+            (item) => item.rule === id && item.selector === selector,
+          );
+          return elements.length
+            ? `:is(${selector}, :where(${elements.map((item) => `[data-uiport-id="${item.id}"]`).join(", ")}))`
+            : selector;
         });
-        for (const node of [...fallback.nodes])
-          if (node.type !== "decl" || !node.prop.startsWith("--"))
-            node.remove();
-        original.after(fallback);
+        let fallback = postcss.rule({ selector: selectors.join(", ") });
+        for (const node of declarations) fallback.append(node.clone());
+        // Keep conditional/group rules while removing style ancestors already
+        // represented in the resolved selectors.
+        for (
+          let parent = original.type === "atrule" ? original : original.parent;
+          parent && parent !== anchor.parent;
+          parent = parent.parent
+        )
+          if (parent.type === "atrule") {
+            const wrapper = parent.clone({ nodes: [] });
+            wrapper.append(fallback);
+            fallback = wrapper;
+          }
+        const tail = tails.get(anchor) || anchor;
+        tail.after(fallback);
+        tails.set(anchor, fallback);
       }
       return roots.map((root) => root.toString());
     },

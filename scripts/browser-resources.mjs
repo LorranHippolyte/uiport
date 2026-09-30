@@ -41,6 +41,7 @@ export function browserResources(page, options, signal) {
           body,
           contentType: response.headers()["content-type"] || "",
           url: response.url(),
+          resourceType: request.resourceType(),
         };
       } catch {
         return null;

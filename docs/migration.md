@@ -24,6 +24,6 @@ Browser-response budgets limit retained bytes. Playwright materializes a respons
 
 ## Evidence
 
-`test/migration.test.mjs` exercises full-page/section output, inline and registered clicks, visual library loading, locale, redirect/Referer resources with the source offline, contextual variables together with media queries and inherited/fluid values, old export validation without mutation, and WebAssembly preview. Existing tests cover `--omit-scripts`, WAAPI replay, staging, deadlines, cleanup and the packaged consumer workflow.
+`test/migration.test.mjs` exercises full-page/section output, inline and registered clicks, visual library loading, locale, redirect/Referer resources with the source offline, contextual variables (including native CSS nesting) together with media queries and inherited/fluid values, extensionless script execution through browser-response reuse and HTTP fallback, old export validation without mutation, and WebAssembly preview. Existing tests cover `--omit-scripts`, WAAPI replay, staging, deadlines, cleanup and the packaged consumer workflow.
 
 This is evidence for these cases, not a promise that every website or application runtime can be exported faithfully. See the [complete agent guide](../uiport.md) for inspection, correction and delivery.

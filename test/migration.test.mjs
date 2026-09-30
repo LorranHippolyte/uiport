@@ -261,3 +261,117 @@ test("migration preview serves WebAssembly and uppercase script extensions corre
     "text/javascript",
   );
 });
+
+test(
+  "migration preserves nested contextual CSS across media conditions and intermediate widths",
+  { timeout: 45000 },
+  async (t) => {
+    const source = await fixture(t, (_req, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+body{margin:0}#hero{background:var(--accent,blue);color:var(--ordered,blue)}.box{width:var(--size,1px);height:20px}
+#trigger + #hero, #unused {
+  & {--accent:rgb(255,0,0)}
+  --accent:rgb(128,0,128);
+  > .box[data-label="&"] {--size:clamp(30px,10vw,100px)}
+  @media(max-width:600px) { @supports(display:grid) { --accent:rgb(0,128,0); } }
+}
+#hero { #trigger + & {--ordered:red} &#hero {--ordered:green} }
+</style><div id="trigger"></div><section id="hero"><div class="box" data-label="&"></div></section>`);
+    });
+    const out = path.join(source.directory, "out");
+    const captured = await cli([
+      "capture",
+      ...common(source.url, "#hero", "800x600,375x812"),
+      "--out",
+      out,
+    ]);
+    assert.equal(captured.code, 0, captured.stdout + captured.stderr);
+    const preview = await startStaticServer(out);
+    t.after(preview.close);
+    const browser = await browserFor(t);
+    for (const width of [800, 600, 500, 375]) {
+      const page = await browser.newPage({ viewport: { width, height: 812 } });
+      const values = [];
+      for (const url of [source.url, preview.url]) {
+        await page.goto(url);
+        values.push(
+          await page.locator("#hero").evaluate((el) => ({
+            color: getComputedStyle(el).backgroundColor,
+            ordered: getComputedStyle(el).color,
+            width: getComputedStyle(el.querySelector(".box")).width,
+          })),
+        );
+      }
+      assert.deepEqual(values[0], {
+        color: width <= 600 ? "rgb(0, 128, 0)" : "rgb(128, 0, 128)",
+        ordered: "rgb(0, 128, 0)",
+        width: `${width * 0.1}px`,
+      });
+      assert.deepEqual(values[1], values[0]);
+      await page.close();
+    }
+  },
+);
+
+test(
+  "migration executes extensionless scripts using their MIME or resource usage, including HTTP fallback",
+  { timeout: 30000 },
+  async (t) => {
+    const source = await fixture(t, (req, res) => {
+      if (req.url === "/runtime") {
+        res.setHeader("content-type", "application/ecmascript");
+        return res.end('window.runtimeReady="loaded"');
+      }
+      if (req.url === "/classic") {
+        res.setHeader("content-type", "text/plain");
+        return res.end('window.classicReady="loaded"');
+      }
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(
+        '<section id="hero">Scripts<script src="/runtime"></script><script src="/classic"></script></section>',
+      );
+    });
+    const out = path.join(source.directory, "out");
+    const captured = await cli([
+      "capture",
+      ...common(source.url, "#hero"),
+      "--out",
+      out,
+    ]);
+    assert.equal(captured.code, 2, captured.stdout + captured.stderr);
+    assert.deepEqual(
+      result(captured).limitations.map((l) => l.code),
+      ["SOURCE_RUNTIME_UNVERIFIED"],
+    );
+    const { resources } = await import("../scripts/resources.mjs");
+    const fallbackDir = path.join(source.directory, "http-fallback");
+    await fs.mkdir(path.join(fallbackDir, "assets"), { recursive: true });
+    const limitations = [];
+    const assets = resources(
+      fallbackDir,
+      { maxTotalBytes: 100000, maxResourceBytes: 100000, timeoutMs: 10000 },
+      new AbortController().signal,
+      limitations,
+    );
+    const localized = await assets.localize("/classic", source.url, "script");
+    assert.match(localized, /\.js$/);
+    assert.deepEqual(limitations, []);
+    await fs.writeFile(
+      path.join(fallbackDir, "index.html"),
+      `<script src="${localized}"></script>`,
+    );
+    await source.close();
+    const browser = await browserFor(t);
+    for (const dir of [out, fallbackDir]) {
+      const preview = await startStaticServer(dir);
+      t.after(preview.close);
+      const page = await browser.newPage();
+      await page.goto(preview.url);
+      assert.equal(await page.evaluate(() => window.classicReady), "loaded");
+      if (dir === out)
+        assert.equal(await page.evaluate(() => window.runtimeReady), "loaded");
+      await page.close();
+    }
+  },
+);

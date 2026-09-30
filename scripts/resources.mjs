@@ -87,8 +87,8 @@ export function resources(
         await response.body.cancel().catch(() => {});
     }
   }
-  /** @param {string} raw @param {string} base */
-  async function localize(raw, base) {
+  /** @param {string} raw @param {string} base @param {string} [usage] */
+  async function localize(raw, base, usage) {
     if (
       !raw ||
       /^(data:|#)/i.test(raw) ||
@@ -116,7 +116,13 @@ export function resources(
     }
     const resource = await download(url.href);
     if (!resource) return url.href;
-    const file = `assets/${sha256(resource.body).slice(0, 24)}${extensionFor(resource.url, resource.contentType)}`;
+    let extension = extensionFor(resource.url, resource.contentType);
+    if (
+      extension === ".bin" &&
+      (usage === "script" || resource.resourceType === "script")
+    )
+      extension = ".js";
+    const file = `assets/${sha256(resource.body).slice(0, 24)}${extension}`;
     if (!localPaths.has(file)) {
       await fs.writeFile(path.join(directory, file), resource.body);
       localPaths.add(file);

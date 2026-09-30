@@ -62,6 +62,8 @@ export function extensionFor(url, contentType = "") {
     ["text/css", ".css"],
     ["text/javascript", ".js"],
     ["application/javascript", ".js"],
+    ["application/ecmascript", ".js"],
+    ["text/ecmascript", ".js"],
     ["image/svg+xml", ".svg"],
     ["image/png", ".png"],
     ["image/jpeg", ".jpg"],
