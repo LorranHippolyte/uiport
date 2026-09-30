@@ -1,0 +1,34 @@
+name: Publish
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+jobs:
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - name: Require reviewed main commit and matching version tag
+        run: |
+          git merge-base --is-ancestor HEAD origin/main
+          node --input-type=module -e 'import p from "./package.json" with { type: "json" }; if (process.env.GITHUB_REF_NAME !== `v${p.version}`) process.exit(1)'
+      - run: npm ci --ignore-scripts
+      - run: npm exec -- playwright-core install --with-deps chromium
+      - run: npm run check
+      - name: Publish through trusted publishing (no long-lived token)
+        run: npm publish --access public
