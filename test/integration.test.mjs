@@ -178,11 +178,24 @@ for (const [example, selector] of [
         );
         assert.notEqual(hover, initial);
         await page.mouse.move(0, 0);
+        await page.waitForFunction(
+          ({ element, initial }) =>
+            !element.matches(":hover") &&
+            getComputedStyle(element).backgroundColor === initial &&
+            element
+              .getAnimations()
+              .every((animation) => animation.playState === "finished"),
+          { element: await target.elementHandle(), initial },
+          { timeout: 5000 },
+        );
         await target.focus();
         await page.waitForFunction(
           ({ element, hover }) =>
             element.matches(":focus") &&
-            getComputedStyle(element).backgroundColor === hover,
+            getComputedStyle(element).backgroundColor === hover &&
+            element
+              .getAnimations()
+              .every((animation) => animation.playState === "finished"),
           { element: await target.elementHandle(), hover },
           { timeout: 5000 },
         );
