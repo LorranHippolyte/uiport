@@ -1,0 +1,9 @@
+node_modules/
+extractions/
+.context/
+.DS_Store
+*.log
+*.tgz
+coverage/
+artifacts/
+.env*
