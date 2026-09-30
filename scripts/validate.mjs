@@ -41,8 +41,7 @@ export async function validate(options) {
     const server = await startStaticServer(options.directory);
     life.add(server.close);
     life.check();
-    const { browser, selected } = await launchChromium(chromium);
-    life.add(() => browser.close());
+    const { browser, selected } = await launchChromium(chromium, life);
     life.check();
     for (const viewport of options.viewports) {
       life.check();

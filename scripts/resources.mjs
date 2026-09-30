@@ -8,6 +8,7 @@ import {
   normalizeUrl,
   sha256,
   redactedUrl,
+  safeErrorMessage,
   limitation,
 } from "./lib.mjs";
 
@@ -60,7 +61,7 @@ export function resources(directory, options, signal, limitations) {
       limitation(
         limitations,
         "RESOURCE_UNAVAILABLE",
-        `${redactedUrl(url)}: ${error.message}`,
+        `${redactedUrl(url)}: ${safeErrorMessage(error)}`,
       );
       downloaded.set(url, null);
       return null;
@@ -114,13 +115,33 @@ export function resources(directory, options, signal, limitations) {
         nodes.push(node);
         return false;
       }
+      if (
+        node.type === "function" &&
+        ["image-set", "-webkit-image-set"].includes(node.value.toLowerCase())
+      ) {
+        // Only direct string candidates are URLs. Strings nested in type()
+        // describe MIME types and must remain untouched.
+        for (const candidate of node.nodes)
+          if (candidate.type === "string") nodes.push(candidate);
+      }
     });
     for (const node of nodes) {
-      const raw = node.nodes[0]?.value || "";
+      const raw =
+        node.type === "string" ? node.value : node.nodes[0]?.value || "";
       const localized = await localize(raw, base);
-      node.nodes = [
-        { type: "string", quote: '"', value: localized.replaceAll('"', "%22") },
-      ];
+      if (node.type === "string")
+        node.value = localized.replaceAll(
+          node.quote,
+          node.quote === '"' ? "%22" : "%27",
+        );
+      else
+        node.nodes = [
+          {
+            type: "string",
+            quote: '"',
+            value: localized.replaceAll('"', "%22"),
+          },
+        ];
     }
     return parsed.toString();
   }
@@ -202,8 +223,7 @@ export function resources(directory, options, signal, limitations) {
     }
     // Imported declarations have already been rewritten against their own base.
     for (const decl of declarations)
-      if (/url\(/i.test(decl.value))
-        decl.value = await cssValue(decl.value, base);
+      decl.value = await cssValue(decl.value, base);
     root.walkComments((comment) => {
       if (/sourceMappingURL/.test(comment.text)) comment.remove();
     });

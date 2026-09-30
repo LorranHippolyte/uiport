@@ -6,7 +6,7 @@ UIport exports a rendered section, not a running application. A successful captu
 |---|---|---|
 | DOM and original CSS | Supported for section containers | Original fixtures tested at four viewports; entire stylesheets retained conservatively |
 | Responsive CSS | Media queries retained | The first DOM is exported; an observed change in element structure at another viewport produces a limitation |
-| Images, srcset, CSS resources | Localized when publicly fetchable | Copied resources have byte/deadline budgets; missing resources produce partial output |
+| Images, srcset, CSS resources (including image-set) | Localized when publicly fetchable | Copied resources have byte/deadline budgets; missing resources produce partial output |
 | Fonts and CSS imports | Supported | Local font fixture; nested imports, layers, supports and media tested |
 | SVG fragments | Preserved | Hash stays on local URL, e.g. `assets/…svg#shape` |
 | Hover/focus and CSS animations | Original CSS preserved | Example states and animations exercised by integration tests |
@@ -30,12 +30,12 @@ The report always says `behavior: "not-tested"`. Capture limitations are also em
 
 - One CSS selector matching one container inside the body. No html/body root export in 0.1.
 - Viewports: 1–8, dimensions 200–3840 pixels. Screenshot comparisons capped at 20 megapixels.
-- Total operation: default 120 seconds, configurable 1–600 seconds. Source navigation bounded; resource fetches have up to 15 seconds each.
+- Total operation: default 120 seconds, configurable 1–600 seconds. The deadline also covers browser startup; cancellation closes the owned browser process tree. Process cleanup can add a short shutdown interval. Source navigation is bounded; resource fetches have up to 15 seconds each.
 - Lazy scroll: default 80 steps, configurable 1–1000. `SCROLL_LIMIT` means content may remain unloaded.
 - Export resource budget: default 20 MiB/file, 100 MiB total; controls downloaded copies, not source browser memory. All referenced CSS resources may be retained, including resources unused by the selected DOM, because CSS is conservative.
 - Public HTTP(S) only; no session/cookie import. Local development URLs are supported. Copied resources are fetched without the source browser's authenticated session.
 - Source JavaScript executes in the capture browser. Removing exported scripts is not a general-purpose sanitizer or sandbox for hostile websites.
-- Source style values and content remain in the HTML. Review artifacts before redistribution. The CLI redacts URL queries in resource diagnostics and does not print source page content or form values.
+- Source style values and content remain in the HTML. Review artifacts before redistribution. The CLI redacts URL credentials, queries and fragments in resource diagnostics and operational errors and does not print source page content or form values.
 - Network/rendering differences, DOM changed by runtime, special CSS/HTML features and states not observed can still require manual work. No invented replacement effects.
 
 Common partial-result codes: `SOURCE_RUNTIME_OMITTED`, `RESOURCE_UNAVAILABLE`, `STYLESHEET_UNAVAILABLE`, `SCROLL_LIMIT`, `RESPONSIVE_DOM_CHANGED`, `CANVAS_STATIC`, `CANVAS_UNREADABLE`, `EMBED_OMITTED`, `ANIMATION_UNSUPPORTED`, `SOURCE_REQUEST_FAILED`, `SOURCE_SCRIPT_ERROR`, `CSS_IMPORT_CYCLE`, `CSS_IMPORT_UNSUPPORTED`.

@@ -7,7 +7,7 @@ import { optionsFor } from "../scripts/options.mjs";
 import { capture } from "../scripts/capture.mjs";
 const temp = await fs.mkdtemp(path.join(os.tmpdir(), "uiport-demo-"));
 const root = path.resolve(import.meta.dirname, "..");
-let source, local, browser;
+let source, local, browser, closeBrowser;
 try {
   source = await startStaticServer(path.join(root, "examples/responsive-hero"));
   const output = path.join(temp, "output");
@@ -23,7 +23,7 @@ try {
   if (result.status !== "complete")
     throw new Error("Demo capture has limitations");
   local = await startStaticServer(output);
-  ({ browser } = await launchChromium(chromium));
+  ({ browser, close: closeBrowser } = await launchChromium(chromium));
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 1,
@@ -52,7 +52,7 @@ try {
     "Generated docs/demo.png and docs/demo.webm from a real UIport extraction.",
   );
 } finally {
-  await browser?.close();
+  await closeBrowser?.();
   await local?.close();
   await source?.close();
   await fs.rm(temp, { recursive: true, force: true });

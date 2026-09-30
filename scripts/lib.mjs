@@ -3,6 +3,8 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import http from "node:http";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
+import { startBrowser } from "./browser-process.mjs";
 
 export const sha256 = (buffer) =>
   crypto.createHash("sha256").update(buffer).digest("hex");
@@ -40,6 +42,13 @@ export function redactedUrl(value) {
   } catch {
     return "(invalid URL)";
   }
+}
+export function safeErrorMessage(error) {
+  // Keep the useful first line, excluding Playwright's verbose call log and
+  // source snippets. Redact every URL, not just the originally requested one.
+  return String(error?.message || "Operation failed")
+    .split(/[\r\n]/, 1)[0]
+    .replace(/https?:\/\/[^\s<>"'`]+/gi, (url) => redactedUrl(url));
 }
 export function limitation(list, code, message) {
   if (!list.some((item) => item.code === code && item.message === message))
@@ -259,36 +268,41 @@ export async function startStaticServer(rootDirectory, requestedPort = 0) {
   };
 }
 
-export async function launchChromium(chromium) {
-  const override =
-    process.env.UIPORT_BROWSER_PATH || process.env.EXTRACTOR_BROWSER_PATH;
+export async function launchChromium(chromium, life) {
+  const override = process.env.UIPORT_BROWSER_PATH;
+  const launch = (options) =>
+    startBrowser(
+      chromium,
+      {
+        headless: true,
+        ...options,
+        timeout: life?.remaining() ?? 30000,
+      },
+      life,
+    );
   if (override) {
     if (!fsSync.existsSync(override))
       throw new Error("UIPORT_BROWSER_PATH does not exist");
     return {
-      browser: await chromium.launch({
-        headless: true,
-        handleSIGINT: false,
-        handleSIGTERM: false,
-        handleSIGHUP: false,
-        executablePath: override,
-      }),
+      ...(await launch({ executablePath: override }).catch((error) => {
+        life?.check();
+        throw new Error(
+          "Could not start UIPORT_BROWSER_PATH; check the executable or run: uiport browser install",
+          { cause: error },
+        );
+      })),
       selected: "explicit path",
     };
   }
   for (const channel of [undefined, "chrome", "msedge"]) {
+    life?.check();
     try {
       return {
-        browser: await chromium.launch({
-          headless: true,
-          handleSIGINT: false,
-          handleSIGTERM: false,
-          handleSIGHUP: false,
-          ...(channel ? { channel } : {}),
-        }),
+        ...(await launch(channel ? { channel } : {})),
         selected: channel || "Playwright Chromium",
       };
     } catch {
+      life?.check();
       /* try next installed browser */
     }
   }
@@ -299,6 +313,7 @@ export async function launchChromium(chromium) {
 
 /** Tracks resources so timeouts and SIGINT/SIGTERM also close failed runs. */
 export function lifecycle(timeoutMs) {
+  const deadline = performance.now() + timeoutMs;
   const controller = new AbortController();
   const cleanups = [];
   let reason;
@@ -326,7 +341,13 @@ export function lifecycle(timeoutMs) {
       if (controller.signal.aborted) void fn().catch(() => {});
     },
     check() {
+      if (!reason && performance.now() >= deadline)
+        cancel(`Operation exceeded ${timeoutMs} ms`);
       if (reason) throw reason;
+    },
+    remaining() {
+      this.check();
+      return Math.max(1, Math.ceil(deadline - performance.now()));
     },
     async close() {
       clearTimeout(timer);

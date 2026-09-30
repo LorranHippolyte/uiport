@@ -115,3 +115,27 @@ test("an aborted download propagates cancellation rather than emitting partial s
   );
   assert.deepEqual(limitations, []);
 });
+
+test("image-set localizes string and url candidates without rewriting MIME type strings", async (t) => {
+  const requests = [];
+  const { assets, url, limitations } = await setup(t, (req, res) => {
+    requests.push(req.url);
+    if (req.url === "/missing.svg") return res.writeHead(404).end();
+    res.setHeader("content-type", "image/svg+xml");
+    res.end(
+      `<svg xmlns="http://www.w3.org/2000/svg"><title>${req.url}</title></svg>`,
+    );
+  });
+  const css = await assets.css(
+    `.tile{background:cross-fade(image-set("one.svg" 1x type("image/svg+xml"), url(two.svg) 2x), red, 50%);mask-image:-webkit-image-set('missing.svg' 1x)}`,
+    `${url}/index.html`,
+  );
+  assert.match(
+    css,
+    /image-set\("\.\/assets\/.* 1x type\("image\/svg\+xml"\), url\("\.\/assets\//,
+  );
+  assert.match(css, /-webkit-image-set\('http:\/\/127\.0\.0\.1:/);
+  assert.deepEqual(requests.sort(), ["/missing.svg", "/one.svg", "/two.svg"]);
+  assert.ok(limitations.some((entry) => entry.code === "RESOURCE_UNAVAILABLE"));
+  assert.equal(assets.stats().assets, 2);
+});

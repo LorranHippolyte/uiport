@@ -1,4 +1,4 @@
 # UIport
 
-For section extraction, read and follow `skills/uiport/SKILL.md`.
-Use the CLI; report known limitations and validate observed behavior.
+Read [uiport.md](uiport.md) for capture and development guidance.
+For section extraction, follow [skills/uiport/SKILL.md](skills/uiport/SKILL.md).

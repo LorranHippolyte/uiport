@@ -14,6 +14,7 @@ flowchart LR
 ```
 
 - `bin/cli.mjs`: dispatch, help, version, structured results, explicit browser install.
+- `scripts/browser-process.mjs` / `browser-host.mjs`: own browser startup in a child process, allowing deadline/cancellation cleanup before Playwright returns a browser handle. The host uses Playwright signal handling on POSIX; Windows terminates only the owned process tree.
 - `scripts/options.mjs`: strict arguments, URL/number/viewport validation.
 - `scripts/capture.mjs`: capture orchestration, staged filesystem output, metadata and exact-data WAAPI replay.
 - `scripts/dom.mjs`: browser-side DOM serialization; removes source script/handler execution, handles open shadow trees, records styles and animation data.
@@ -22,7 +23,7 @@ flowchart LR
 - `scripts/lib.mjs`: browser discovery, lifecycle cleanup, static server confinement, serialization and staging utilities.
 - `examples/`: original MIT-licensed material for onboarding and repeatable tests.
 
-The original extractor's browser serialization and pixel comparison were retained and separated into testable modules. CSS is deliberately conservative in 0.1. Complete CSS pruning, framework code generation and generic runtime isolation are not included.
+UIport separates browser serialization and pixel comparison into testable modules. CSS is deliberately conservative in 0.1. Complete CSS pruning, framework code generation and generic runtime isolation are not included.
 
 The output transaction never overwrites a nonempty directory. Work happens in a sibling temporary folder and is moved only after serialization succeeds; temporary files are cleaned after failures. Concurrent edits to an originally empty destination cause commit to fail instead of replacing the new content.
 

@@ -71,7 +71,7 @@ Capture e validate aceitam `--viewports`, `--wait`, `--timeout`, `--max-scroll-s
 
 A captura limita recursos copiados a 20 MiB por arquivo e 100 MiB no total, configuráveis por `--max-resource-mb` e `--max-total-mb`. Esses limites são do downloader da exportação, não da memória completa do navegador que abre a origem. Cada download também tem prazo de até 15 s.
 
-`UIPORT_BROWSER_PATH` define o executável do navegador; o alias antigo `EXTRACTOR_BROWSER_PATH` continua aceito. Sem override, o UIport tenta Chromium compatível, Chrome e Edge instalados, incluindo macOS.
+`UIPORT_BROWSER_PATH` define o executável do navegador. Sem override, o UIport tenta Chromium compatível, Chrome e Edge instalados, incluindo macOS.
 
 ## Como interpretar o resultado
 
@@ -86,7 +86,7 @@ A comparação visual desativa animações, aceita por padrão 2% de diferença 
 
 ## Usar com agentes e contribuir
 
-Leia [skills/uiport/SKILL.md](skills/uiport/SKILL.md) ou copie para a pasta de skills do seu agente. A skill também acompanha o pacote npm. O agente deve capturar, ler limitações, inspecionar interações suportadas e validar, sem inventar efeitos substitutos. O UIport não chama uma API de LLM.
+Comece por [uiport.md](uiport.md). Leia [skills/uiport/SKILL.md](skills/uiport/SKILL.md) ou copie para a pasta de skills do seu agente. A skill também acompanha o pacote npm. O agente deve capturar, ler limitações, inspecionar interações suportadas e validar, sem inventar efeitos substitutos. O UIport não chama uma API de LLM.
 
 Contribuições em recursos, documentação, testes e diagnóstico são bem-vindas. Veja [CONTRIBUTING.md](CONTRIBUTING.md). Use fixtures locais autorais; não envie extrações de clientes. Depois de instalar o browser, `npm run check` executa as verificações de desenvolvimento.
 

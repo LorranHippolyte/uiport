@@ -48,6 +48,36 @@ const validateArgs = (url, out, selector = "#hero", views = "800x600") => [
   "--json",
 ];
 
+test(
+  "image-set in inline, stylesheet and imported CSS remains portable offline",
+  { timeout: 45000 },
+  async (t) => {
+    const temp = await fixture(t),
+      sourceDir = path.join(temp, "source");
+    await fs.mkdir(path.join(sourceDir, "styles"), { recursive: true });
+    await fs.writeFile(
+      path.join(sourceDir, "red.svg"),
+      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="red"/></svg>',
+    );
+    await fs.writeFile(
+      path.join(sourceDir, "styles", "import.css"),
+      '.imported{background-image:image-set("../red.svg" 1x type("image/svg+xml"), url(../red.svg) 2x)}',
+    );
+    await fs.writeFile(
+      path.join(sourceDir, "index.html"),
+      `<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>@import "styles/import.css";body{margin:0}.tile{width:100px;height:100px}.styled{background-image:-webkit-image-set("red.svg" 1x)}</style><section id="hero"><div class="tile" style='background-image:image-set("red.svg" 1x)'></div><div class="tile styled"></div><div class="tile imported"></div></section>`,
+    );
+    const source = await local(t, sourceDir),
+      out = path.join(temp, "out");
+    const captured = await cli(captureArgs(source.url, out));
+    assert.equal(captured.code, 0, captured.stdout + captured.stderr);
+    assert.equal(result(captured).assets, 1);
+    const verified = await cli(validateArgs(source.url, out));
+    assert.equal(verified.code, 0, verified.stdout + verified.stderr);
+    assert.deepEqual(result(verified).results[0].network.externalRequests, []);
+  },
+);
+
 for (const [example, selector] of [
   ["responsive-hero", "#hero"],
   ["css-motion", "#motion"],

@@ -71,7 +71,7 @@ Open `http://127.0.0.1:4174`. You can move that output directory and serve it ag
 
 Capture limits copied resources to 20 MiB each and 100 MiB in total. Override with `--max-resource-mb` and `--max-total-mb`. These bound the export downloader, not the source browser's complete memory use. Resource fetching also has a 15 s request deadline.
 
-Set `UIPORT_BROWSER_PATH` to explicitly choose an executable. The legacy `EXTRACTOR_BROWSER_PATH` is accepted. Otherwise UIport tries its compatible Chromium, then installed Chrome and Edge, including on macOS.
+Set `UIPORT_BROWSER_PATH` to explicitly choose an executable. Otherwise UIport tries its compatible Chromium, then installed Chrome and Edge, including on macOS.
 
 ### Read the result
 
@@ -86,7 +86,7 @@ Validation disables animations for screenshots. It compares pixels with a defaul
 
 ## Use with a coding agent
 
-Read [skills/uiport/SKILL.md](skills/uiport/SKILL.md), or copy it into your agent's skill directory. The same file ships with the npm package. The agent should capture, read limitations, inspect supported interactions and validate, without inventing replacement effects. No LLM API is called by UIport itself.
+Start with [uiport.md](uiport.md). Read [skills/uiport/SKILL.md](skills/uiport/SKILL.md), or copy it into your agent's skill directory. The same file ships with the npm package. The agent should capture, read limitations, inspect supported interactions and validate, without inventing replacement effects. No LLM API is called by UIport itself.
 
 ## Contribute
 

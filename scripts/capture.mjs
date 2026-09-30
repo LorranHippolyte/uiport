@@ -29,8 +29,7 @@ export async function capture(options) {
   const captures = [];
   let stage;
   try {
-    const { browser, selected } = await launchChromium(chromium);
-    life.add(() => browser.close());
+    const { browser, selected, close } = await launchChromium(chromium, life);
     life.check();
     const context = await browser.newContext({
       viewport: viewports[0],
@@ -81,7 +80,7 @@ export async function capture(options) {
       await root.scrollIntoViewIfNeeded();
       captures.push(await page.evaluate(extractSection, selector));
     }
-    await browser.close();
+    await close();
     life.check();
     const primary = captures[0];
     if (captures.some((c) => c.structure !== primary.structure))

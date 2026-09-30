@@ -36,7 +36,7 @@ try {
   for (const { path: file } of pack.files) {
     assert.match(
       file,
-      /^(bin\/cli\.mjs|scripts\/[a-z-]+\.mjs|examples\/(responsive-hero|css-motion)\/(index\.html|section\.svg)|skills\/uiport\/SKILL\.md|docs\/(support\.md|architecture\.md|demo\.png)|package\.json|README(?:\.pt-BR)?\.md|(?:CONTRIBUTING|SECURITY|CODE_OF_CONDUCT|GOVERNANCE|CHANGELOG)\.md|LICENSE|NOTICE)$/,
+      /^(bin\/cli\.mjs|scripts\/[a-z-]+\.mjs|examples\/(responsive-hero|css-motion)\/(index\.html|section\.svg)|skills\/uiport\/SKILL\.md|docs\/(support\.md|architecture\.md|demo\.png)|package\.json|uiport\.md|README(?:\.pt-BR)?\.md|(?:CONTRIBUTING|SECURITY|CODE_OF_CONDUCT|GOVERNANCE|CHANGELOG)\.md|LICENSE|NOTICE)$/,
     );
     assert.doesNotMatch(
       file,

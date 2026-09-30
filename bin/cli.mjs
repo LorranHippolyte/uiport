@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { allowed, parseArgs, optionsFor } from "../scripts/options.mjs";
+import { safeErrorMessage } from "../scripts/lib.mjs";
 const require = createRequire(import.meta.url);
 const { version } = require("../package.json");
 const argv = process.argv.slice(2);
@@ -102,11 +103,11 @@ try {
   if (json)
     console.log(
       JSON.stringify({
-        command: command || "help",
+        command: Object.hasOwn(allowed, command) ? command : "help",
         status: "failed",
-        error: { code: "OPERATION_FAILED", message: error.message },
+        error: { code: "OPERATION_FAILED", message: safeErrorMessage(error) },
       }),
     );
-  else process.stderr.write(`UIport: ${error.message}\n`);
+  else process.stderr.write(`UIport: ${safeErrorMessage(error)}\n`);
   process.exitCode = 1;
 }
