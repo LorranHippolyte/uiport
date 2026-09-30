@@ -25,6 +25,10 @@ async function run(command, args, cwd) {
     child.once("close", resolve);
   });
   assert.equal(code, 0, `${command} ${args.join(" ")}\n${stdout}\n${stderr}`);
+  assert.doesNotMatch(
+    stderr,
+    /without first[\s\S]*installing your project's dependencies/,
+  );
   return stdout;
 }
 let server;
@@ -43,8 +47,9 @@ try {
       /node_modules|\.context|extractions|\.env|package-lock/,
     );
   }
-  const consumer = path.join(temporary, "consumer");
-  await fs.mkdir(consumer);
+  // Reproduce the dependency location used by npx, including its _npx marker.
+  const consumer = path.join(temporary, "_npx", "consumer");
+  await fs.mkdir(consumer, { recursive: true });
   await run(
     npm,
     [
@@ -59,6 +64,23 @@ try {
   );
   const installed = path.join(consumer, "node_modules", "uiport");
   const cli = path.join(installed, "bin", "cli.mjs");
+  const emptyProject = path.join(temporary, "empty-project");
+  await fs.mkdir(emptyProject);
+  assert.match(
+    await run(process.execPath, [cli, "browser", "install"], emptyProject),
+    /Chromium installation complete/,
+  );
+  assert.deepEqual(
+    JSON.parse(
+      await run(
+        process.execPath,
+        [cli, "browser", "install", "--json"],
+        emptyProject,
+      ),
+    ),
+    { command: "browser", status: "complete" },
+  );
+  assert.deepEqual(await fs.readdir(emptyProject), []);
   assert.match(
     await run(process.execPath, [cli, "--help"], consumer),
     /UIport/,
@@ -132,7 +154,7 @@ try {
     "0.1.0",
   );
   console.log(
-    `Tarball verified: ${pack.files.length} allowlisted files, ${pack.size} bytes; local/global install, npm exec, capture and offline validation passed outside the checkout.`,
+    `Tarball verified: ${pack.files.length} allowlisted files, ${pack.size} bytes; local/global install, npm exec, browser installation from an empty project, capture and offline validation passed outside the checkout.`,
   );
 } finally {
   await server?.close();

@@ -22,7 +22,7 @@ O CSS é preservado de forma conservadora, incluindo regras fora da seção esco
 
 Requer **Node.js 22.14+**; recomendamos Node 24 LTS. O Chromium é instalado explicitamente, ou a ferramenta usa Chrome/Edge já disponível. Sessões pessoais do navegador não são importadas.
 
-Instale pelo npm:
+Execute os comandos em uma pasta de sua escolha, que pode estar vazia. O `npx` obtém o UIport automaticamente; não é necessário criar um `package.json` nem rodar `npm install` nessa pasta. `browser install` prepara o Chromium no cache compartilhado do Playwright.
 
 ```sh
 npx uiport@0.1.0 browser install

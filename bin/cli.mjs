@@ -63,6 +63,11 @@ try {
       const child = spawn(
         process.execPath,
         [
+          "--eval",
+          // This is UIport's bundled installer, not a bare npx Playwright
+          // invocation. Give the CLI our command name so its _npx path
+          // heuristic does not tell users to create a local npm project.
+          'const cli = process.argv[1]; process.argv[1] = "uiport"; require(cli);',
           path.join(
             path.dirname(require.resolve("playwright-core/package.json")),
             "cli.js",
@@ -88,6 +93,10 @@ try {
             command: "browser",
             status: code === 0 ? "complete" : "failed",
           }),
+        );
+      else if (code === 0)
+        console.log(
+          "UIport: Chromium installation complete. Ready to capture.",
         );
       process.exitCode = Number(code);
     } else {
