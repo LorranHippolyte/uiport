@@ -3,6 +3,21 @@
 import { chromium } from "playwright-core";
 
 let server;
+let closing;
+const close = () =>
+  (closing ||= (async () => {
+    if (server) {
+      // Keep the owner alive until Playwright has reaped the browser and removed
+      // its profiles/artifacts, including on Windows.
+      await server.close();
+      if (process.connected) process.disconnect();
+    } else if (process.platform !== "win32") {
+      process.kill(process.pid, "SIGTERM");
+    }
+  })());
+process.on("message", (message) => {
+  if (message.action === "close") void close();
+});
 process.once("message", async (options) => {
   try {
     server = await chromium.launchServer({
@@ -23,7 +38,4 @@ process.once("message", async (options) => {
     if (process.connected) process.disconnect();
   }
 });
-process.once("disconnect", () => {
-  if (server) void server.kill();
-  else process.kill(process.pid, "SIGTERM");
-});
+process.once("disconnect", () => void close());

@@ -78,6 +78,39 @@ test(
   },
 );
 
+test(
+  "successful capture and validation remove browser profiles and artifacts",
+  { timeout: 45000 },
+  async (t) => {
+    const temp = await fixture(t);
+    const scratch = path.join(temp, "browser-temp");
+    await fs.mkdir(scratch);
+    const source = await local(
+      t,
+      path.join(project, "examples/responsive-hero"),
+    );
+    const out = path.join(temp, "out");
+    const env = {
+      ...process.env,
+      TMPDIR: scratch,
+      TMP: scratch,
+      TEMP: scratch,
+    };
+    for (const args of [
+      captureArgs(source.url, out),
+      validateArgs(source.url, out),
+    ]) {
+      const run = await cli(args, { env });
+      assert.equal(run.code, 0, run.stdout + run.stderr);
+      assert.deepEqual(
+        await fs.readdir(scratch),
+        [],
+        "Browser owner must remove its temporary profiles and artifacts before returning",
+      );
+    }
+  },
+);
+
 for (const [example, selector] of [
   ["responsive-hero", "#hero"],
   ["css-motion", "#motion"],

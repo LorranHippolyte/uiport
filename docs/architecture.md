@@ -14,7 +14,7 @@ flowchart LR
 ```
 
 - `bin/cli.mjs`: dispatch, help, version, structured results, explicit browser install.
-- `scripts/browser-process.mjs` / `browser-host.mjs`: own browser startup in a child process, allowing deadline/cancellation cleanup before Playwright returns a browser handle. The host uses Playwright signal handling on POSIX; Windows terminates only the owned process tree.
+- `scripts/browser-process.mjs` / `browser-host.mjs`: own browser startup in a child process, allowing deadline/cancellation cleanup before Playwright returns a browser handle. Normal shutdown asks Playwright to close through IPC and waits for cleanup. Bounded signal/process-tree termination handles unresponsive browsers; the parent removes its dedicated temporary directory even after forced cancellation.
 - `scripts/options.mjs`: strict arguments, URL/number/viewport validation.
 - `scripts/capture.mjs`: capture orchestration, staged filesystem output, metadata and exact-data WAAPI replay.
 - `scripts/dom.mjs`: browser-side DOM serialization; removes source script/handler execution, handles open shadow trees, records styles and animation data.
