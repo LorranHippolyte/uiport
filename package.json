@@ -1,0 +1,79 @@
+{
+  "name": "uiport",
+  "version": "0.1.0",
+  "description": "Bring a rendered web section into your next project as editable HTML, CSS and assets.",
+  "type": "module",
+  "bin": {
+    "uiport": "bin/cli.mjs"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "license": "MIT",
+  "author": "Lorran Hippolyte (https://github.com/LorranHippolyte)",
+  "contributors": [
+    "LuminaSoft"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LorranHippolyte/uiport.git"
+  },
+  "homepage": "https://github.com/LorranHippolyte/uiport#readme",
+  "bugs": {
+    "url": "https://github.com/LorranHippolyte/uiport/issues"
+  },
+  "keywords": [
+    "cli",
+    "html",
+    "css",
+    "web-development",
+    "playwright",
+    "extraction",
+    "ai-agents"
+  ],
+  "files": [
+    "bin/",
+    "scripts/",
+    "examples/",
+    "skills/",
+    "docs/support.md",
+    "README.pt-BR.md",
+    "uiport.md",
+    "NOTICE",
+    "docs/architecture.md",
+    "docs/migration.md",
+    "docs/demo.png",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    "GOVERNANCE.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "lint": "eslint bin scripts tools test",
+    "typecheck": "tsc --noEmit",
+    "build": "node tools/check-syntax.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs",
+    "test:unit": "node --test test/unit.test.mjs",
+    "test:package": "node tools/test-package.mjs",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm test && npm run test:package",
+    "format:check": "prettier --check bin scripts test tools/*.mjs *.mjs *.json .github",
+    "demo": "node tools/demo.mjs"
+  },
+  "dependencies": {
+    "parse-srcset": "1.0.2",
+    "parse5": "7.3.0",
+    "pixelmatch": "7.1.0",
+    "playwright-core": "1.62.1",
+    "pngjs": "7.0.0",
+    "postcss": "8.5.28",
+    "postcss-value-parser": "4.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "22.19.0",
+    "eslint": "10.11.0",
+    "prettier": "3.6.2",
+    "typescript": "5.9.3"
+  }
+}

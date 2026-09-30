@@ -1,0 +1,15 @@
+name: Feature proposal
+description: Describe a use case and an observable outcome.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Proposed behavior and how to verify it
+    validations:
+      required: true

@@ -1,0 +1,23 @@
+name: Bug report
+description: Report unexpected UIport behavior using a minimal reproduction.
+body:
+  - type: input
+    id: environment
+    attributes:
+      label: UIport, Node and operating system versions
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Command and reproduction
+      description: Prefer an original local fixture. Remove URL credentials, queries and private paths. Do not upload captured customer HTML.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and observed behavior
+      description: Include relevant limitation codes, not private page content.
+    validations:
+      required: true
