@@ -22,10 +22,11 @@ Capture / validate:
   --wait 1200                 Settle time per navigation (ms, 0–60000)
   --timeout 120000            Whole operation deadline (ms, 1000–600000)
   --max-scroll-steps 80       Bounded lazy-loading scroll (1–1000)
-  --locale en-US              Browser locale
+  --locale pt-BR              Browser locale
   --color-scheme light        light | dark
   --json                     One JSON result on stdout; progress on stderr
 Capture:
+  --omit-scripts             Omit source scripts and inline event handlers
   --max-resource-mb 20        Maximum copied resource size (0.001–100 MiB)
   --max-total-mb 100          Total resource download budget (0.001–500 MiB)
 Validate:

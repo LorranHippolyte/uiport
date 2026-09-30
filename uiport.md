@@ -15,7 +15,7 @@ site--secao/
     └── recursos locais da captura
 ```
 
-Não gere `manifest.json`, relatórios, screenshots, arquivos de evidência, CSS separado, JavaScript separado, pastas de validação ou documentação dentro da pasta entregue. CSS e a reprodução de animações suportadas ficam incorporados no `index.html`. Temporários de análise ficam fora da entrega e devem ser apagados ao terminar. A CLI incorpora os diagnósticos no próprio HTML, sem criar um relatório separado.
+Não gere `manifest.json`, relatórios, screenshots, arquivos de evidência, CSS separado, bundles JavaScript novos, pastas de validação ou documentação dentro da pasta entregue. CSS, scripts inline originais e a reprodução de animações suportadas ficam incorporados no `index.html`. Scripts externos originais preservados são recursos referenciados em `assets/`. Temporários de análise ficam fora da entrega e devem ser apagados ao terminar. A CLI incorpora os diagnósticos no próprio HTML, sem criar um relatório separado.
 
 O objetivo da revisão manual é manter somente os assets necessários à seção e aos estados verificados. A CLI 0.1 preserva CSS de forma conservadora e pode baixar recursos de regras não usadas pela seção; não presuma que ela já eliminou todos os assets excedentes.
 
@@ -26,7 +26,7 @@ O objetivo da revisão manual é manter somente os assets necessários à seçã
 3. Não simplifique, não melhore e não substitua um efeito por outro parecido.
 4. Não invente CSS, keyframes, JavaScript, imagens, estados ou comportamento.
 5. Localize os recursos necessários em `./assets/` e use caminhos relativos. Dependências que não puderem ser localizadas precisam ser declaradas.
-6. Não incorpore analytics, trackers, autenticação, pagamentos ou lógica de negócio na entrega. A CLI remove scripts da origem e handlers inline; isso não prova a ausência de rastreamento em todo recurso nem torna uma origem hostil segura.
+6. Não incorpore analytics, trackers, autenticação, pagamentos ou lógica de negócio na entrega. A CLI preserva scripts capturados e handlers inline por padrão para manter o comportamento anterior. Inspecione o código original; use `--omit-scripts` quando quiser omiti-lo. A preservação não isola automaticamente código visual de lógica de negócio, e a omissão não torna uma origem hostil segura.
 7. Não declare fidelidade completa se partes visuais, interações ou animações estiverem faltando. Um artefato parcial deve ser identificado como parcial, mesmo quando a comparação estática passar.
 8. Não sobrescreva uma pasta com conteúdo nem publique extrações de clientes, credenciais ou material de terceiros como fixtures do projeto.
 
@@ -37,7 +37,7 @@ O objetivo da revisão manual é manter somente os assets necessários à seçã
 - Abra a URL em navegador com JavaScript habilitado.
 - Aguarde DOM, rede, fontes e imagens estabilizarem dentro de um prazo limitado; não espere indefinidamente por páginas com atividade contínua.
 - Role a página para ativar lazy loading e efeitos de entrada. Inspecione o diagnóstico se o limite de rolagem for atingido.
-- Localize uma única raiz que contenha toda a seção, incluindo elementos decorativos, overlays e backgrounds. O seletor deve encontrar um container dentro de `body`; não use `html` ou `body` como raiz.
+- Localize uma única raiz que contenha toda a seção, incluindo elementos decorativos, overlays e backgrounds. O seletor deve encontrar uma única raiz. Use um container para uma seção, `body` para a página visível inteira ou `html` para incluir também os scripts do head; não se trata de crawling de múltiplas páginas.
 - Observe o estado inicial e todas as interações relevantes: entrada, scroll, hover, foco, tabs, accordion, carousel e mousemove.
 - Compare os tamanhos de tela necessários e mantenha viewport, idioma e tema consistentes entre captura e validação.
 
@@ -60,13 +60,13 @@ O objetivo da revisão manual é manter somente os assets necessários à seçã
 
 - CSS Animation/Transition: preserve as regras e os `@keyframes` originais e teste os estados de ativação.
 - Web Animations API: confira keyframes, timing, delay, iterations, direction, fill, easing, playback rate e estado observados. A CLI reproduz animações serializáveis em DocumentTimeline; não reconstrói genericamente os eventos que as iniciaram.
-- GSAP, ScrollTrigger, AOS, Lottie, Swiper, Webflow ou outra biblioteca: investigue a biblioteca e a configuração/código original necessários. A CLI não recupera esses runtimes automaticamente e remove scripts e handlers da origem. Se a demanda incluir a integração manual, isole somente o código visual original necessário, sem incorporar lógica de negócio ou rastreamento, e valide novamente.
+- GSAP, ScrollTrigger, AOS, Lottie, Swiper, Webflow ou outra biblioteca: investigue a biblioteca e a configuração/código original necessários. A CLI preserva scripts do recorte, handlers e scripts de bibliotecas visuais reconhecidas, como o protótipo. Isso não recupera automaticamente inicialização externa ao recorte nem todas as dependências do runtime. Se a demanda incluir a integração manual, isole somente o código visual original necessário, sem incorporar lógica de negócio ou rastreamento, e valide novamente.
 - Framer ou outro runtime proprietário: extraia o comportamento somente quando os dados e o runtime necessários puderem ser inspecionados e isolados. Não recrie com uma animação aproximada. Quando isso não for viável, informe a limitação.
 - Efeitos dependentes de scroll precisam ser testados com espaço real de rolagem, sem inserir conteúdo visual fictício dentro da seção. Qualquer suporte temporário de teste deve ficar fora da entrega.
 
 ### 5. Organizar assets
 
-- Confira imagens, SVGs externos, fontes e vídeos referenciados pela seção. Integrações manuais de comportamento precisam respeitar o formato da entrega, com código incorporado ao HTML.
+- Confira imagens, SVGs externos, fontes e vídeos referenciados pela seção. Scripts externos originais preservados também ficam em assets; código inline continua incorporado ao HTML. Integrações manuais precisam respeitar essa estrutura, sem criar um novo bundle ou comportamento aproximado.
 - Não salve stylesheets separados: incorpore o CSS no HTML e ajuste suas referências locais.
 - Remova recursos excedentes somente após verificar referências e estados responsivos/interativos; uma regra inativa no viewport inicial pode ser necessária em outro estado.
 - O HTML deve continuar funcionando quando a pasta for movida e servida novamente. Inspecione também dependências internas de SVGs baixados, que a CLI não localiza integralmente.
@@ -99,7 +99,9 @@ Leia o diagnóstico antes de entregar:
 - Retorno **1**: falha operacional ou falha das verificações solicitadas no validate.
 - `--json`: resultado em stdout e progresso em stderr. Não confunda um artefato parcial com falha sem saída.
 
-Se houver runtime omitido, recurso não localizado, mudança estrutural responsiva ou canvas dinâmico, investigue a origem antes de concluir.
+O idioma padrão permanece `pt-BR`. `capture --omit-scripts` desativa a cópia de scripts da origem e eventos inline; nesse modo, animações WAAPI observadas continuam podendo ser reproduzidas. Sem essa opção, `SOURCE_RUNTIME_UNVERIFIED` pede inspeção do código preservado.
+
+Se houver runtime omitido ou não verificado, recurso não localizado, mudança estrutural responsiva ou canvas dinâmico, investigue a origem antes de concluir.
 
 ## Validação obrigatória
 
@@ -110,6 +112,8 @@ node bin/cli.mjs validate --dir "./extractions/<site>--<secao>" --url "<URL>" --
 ```
 
 A comparação ocorre em memória, sem arquivos adicionais na entrega. Ela desativa animações para as screenshots, usa tolerâncias documentadas e relata comportamento como `not-tested`. Um retorno 0 comprova somente as verificações visuais/de rede nos estados observados; não elimina limitações da captura.
+
+O validador reconhece também a raiz de artefatos do protótipo sem modificar a pasta. As novas capturas usam os marcadores UIport.
 
 Abra a saída para inspeção manual:
 
@@ -144,6 +148,7 @@ Leia e siga uiport.md. Clone a seção <descrição> de <URL>.
 - Instalação e comandos: [README.md](README.md) / [README.pt-BR.md](README.pt-BR.md).
 - Capacidades verificadas e limitações: [docs/support.md](docs/support.md).
 - Skill resumida para agentes: [skills/uiport/SKILL.md](skills/uiport/SKILL.md).
+- Compatibilidade com o protótipo: [docs/migration.md](docs/migration.md).
 - Arquitetura: [docs/architecture.md](docs/architecture.md).
 - Desenvolvimento e contribuição: [CONTRIBUTING.md](CONTRIBUTING.md).
 

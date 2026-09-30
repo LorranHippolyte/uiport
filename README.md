@@ -18,7 +18,7 @@ my-section/
 └── assets/        # Local images, fonts and other referenced resources
 ```
 
-UIport keeps original CSS conservatively, including rules outside the selected section. It exports the first viewport's DOM and checks several screen sizes. It does **not** generate React components, crawl an entire site or recover arbitrary JavaScript behavior. Source scripts and inline event handlers are omitted. CSS motion and serializable Web Animations can travel with the section; framework runtimes require manual work.
+UIport keeps original CSS conservatively, including rules outside the selected section. It exports the first viewport's DOM and checks several screen sizes. It does **not** generate React components, crawl an entire site or recover arbitrary JavaScript behavior. Original scripts inside the selected content, inline event handlers and recognized visual library scripts are retained by default, as in the prototype. Use `capture --omit-scripts` to omit them. CSS motion and serializable Web Animations can travel with the section; dependencies and initialization outside it still require manual work.
 
 ## Quick start
 
@@ -33,7 +33,7 @@ npx uiport@0.1.0 serve --dir ./my-section
 npx uiport@0.1.0 validate --url "https://your-site.example" --selector "#hero" --dir ./my-section
 ```
 
-Choose the selector using your browser's **Inspect element** tool. It must match exactly one container, such as `main`, `section` or a `div`. Select a container inside `body`, not `html` or `body` itself.
+Choose the selector using your browser's **Inspect element** tool. It must match exactly one container, such as `main`, `section` or a `div`. Use `body` to capture the whole visible page, or `html` to include original head scripts as well. This captures one page, not a multi-page crawl.
 
 For repeated use: `npm install -g uiport`, then `uiport --help`. Pin a version for repeatable captures; `npx uiport@latest` follows future releases.
 
@@ -67,9 +67,9 @@ Open `http://127.0.0.1:4174`. You can move that output directory and serve it ag
 | `browser install` | Install Chromium matched to the bundled Playwright version |
 | `--help` / `--version` | Inspect the CLI without starting a browser |
 
-`capture` and `validate` share `--viewports`, `--wait`, `--timeout`, `--max-scroll-steps`, `--locale`, `--color-scheme` and `--json`. Defaults: four viewports (`1440x900,1024x768,768x1024,375x812`), 1200 ms settle time, 120 s whole-operation deadline and 80 scroll steps.
+`capture` and `validate` share `--viewports`, `--wait`, `--timeout`, `--max-scroll-steps`, `--locale`, `--color-scheme` and `--json`. Defaults: four viewports (`1440x900,1024x768,768x1024,375x812`), 1200 ms settle time, 120 s whole-operation deadline and 80 scroll steps. The default locale is `pt-BR`; use the same `--locale` and `--color-scheme` in capture and validation.
 
-Capture limits copied resources to 20 MiB each and 100 MiB in total. Override with `--max-resource-mb` and `--max-total-mb`. These bound the export downloader, not the source browser's complete memory use. Resource fetching also has a 15 s request deadline.
+Capture limits copied resources to 20 MiB each and 100 MiB in total. Override with `--max-resource-mb` and `--max-total-mb`. The capture reuses responses received by its fresh browser context (including resources requiring Referer), then uses HTTP fetch as fallback. Budgets limit retained response bytes and exported downloads, not the browser's complete memory or the temporary buffer materialized by Playwright. Fallback fetching has a 15 s request deadline.
 
 Set `UIPORT_BROWSER_PATH` to explicitly choose an executable. Otherwise UIport tries its compatible Chromium, then installed Chrome and Edge, including on macOS.
 
@@ -80,9 +80,11 @@ Set `UIPORT_BROWSER_PATH` to explicitly choose an executable. Otherwise UIport t
 - **Exit 1:** command failed, or validation failed its requested checks.
 - **Validation exit 0:** the observed visual/network checks passed. Behavior remains `not-tested`.
 
-`--json` produces one result on stdout for capture/validate/browser; progress goes to stderr. `serve --json` emits one readiness document and stays running until stopped. A script calling capture must handle exit 2, not treat every nonzero exit as “no files”. An existing nonempty output directory is never overwritten.
+`--json` produces one result on stdout for capture/validate/browser; progress goes to stderr. `serve --json` emits one readiness document and stays running until stopped. A script calling capture must handle exit 2, not treat every nonzero exit as “no files”. An existing nonempty output directory is never overwritten. Retained source code is reported as `SOURCE_RUNTIME_UNVERIFIED`: test its interactions; a screenshot match is not proof that all runtime dependencies survived.
 
-Validation disables animations for screenshots. It compares pixels with a default 2% difference allowance and up to 5 px height difference; this does not certify hover, clicks, scroll animation or framework state. External requests are **blocked by default** in the exported page, including another localhost port. `--allow-external` opts out of that offline check. Inspect the [support matrix](docs/support.md) before interpreting a passing result.
+Validation disables animations for screenshots. It compares pixels with a default 2% difference allowance and up to 5 px height difference; this does not certify hover, clicks, scroll animation or framework state. External requests are **blocked by default** in the exported page, including another localhost port. `--allow-external` opts out of that offline check. Existing prototype exports remain usable with `validate`; its legacy root marker is recognized without rewriting the folder. New exports use UIport markers. Inspect the [support matrix](docs/support.md) before interpreting a passing result.
+
+Migration compatibility and intentional command/default changes: [migration notes](docs/migration.md).
 
 ## Use with a coding agent
 

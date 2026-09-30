@@ -18,6 +18,7 @@ export const allowed = {
     "out",
     "max-resource-mb",
     "max-total-mb",
+    "omit-scripts",
     "max-scroll-steps",
   ],
   validate: [
@@ -31,7 +32,13 @@ export const allowed = {
   serve: [...common, "dir", "port"],
   browser: common,
 };
-const booleans = new Set(["json", "help", "version", "allow-external"]);
+const booleans = new Set([
+  "json",
+  "help",
+  "version",
+  "allow-external",
+  "omit-scripts",
+]);
 
 /** @param {string[]} argv @param {string[]} keys */
 export function parseArgs(argv, keys) {
@@ -114,6 +121,7 @@ export function httpUrl(value) {
 export function optionsFor(command, args) {
   const options = {
     json: args.json === true,
+    omitScripts: args["omit-scripts"] === true,
     sourceUrl: "",
     selector: "",
     directory: "",
@@ -122,7 +130,7 @@ export function optionsFor(command, args) {
     ),
     settleMs: numeric(args.wait, "wait", 1200, 0, 60000),
     timeoutMs: numeric(args.timeout, "timeout", 120000, 1000, 600000),
-    locale: typeof args.locale === "string" ? args.locale : "en-US",
+    locale: typeof args.locale === "string" ? args.locale : "pt-BR",
     colorScheme: /** @type {'light' | 'dark'} */ (
       args["color-scheme"] || "light"
     ),

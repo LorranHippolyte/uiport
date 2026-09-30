@@ -18,7 +18,7 @@ minha-secao/
 └── assets/        # Imagens, fontes e outros recursos localizados
 ```
 
-O CSS é preservado de forma conservadora, incluindo regras fora da seção escolhida. A saída usa o DOM do primeiro tamanho de tela; a validação compara vários tamanhos. A ferramenta não gera componentes React, não percorre um site inteiro e não recupera qualquer comportamento JavaScript. Scripts da origem e eventos inline são omitidos. CSS e animações Web Animations serializáveis podem ser preservados; runtimes de frameworks exigem análise manual.
+O CSS é preservado de forma conservadora, incluindo regras fora da seção escolhida. A saída usa o DOM do primeiro tamanho de tela; a validação compara vários tamanhos. A ferramenta não gera componentes React, não percorre um site inteiro e não recupera qualquer comportamento JavaScript. Scripts dentro do conteúdo selecionado, eventos inline e scripts de bibliotecas visuais reconhecidas são preservados por padrão, como no protótipo. Use `capture --omit-scripts` para omiti-los. CSS e animações Web Animations serializáveis podem ser preservados; dependências e inicialização fora do recorte continuam exigindo análise manual.
 
 ## Instalação e uso
 
@@ -33,7 +33,7 @@ npx uiport@0.1.0 serve --dir ./minha-secao
 npx uiport@0.1.0 validate --url "https://seu-site.example" --selector "#hero" --dir ./minha-secao
 ```
 
-Para escolher o seletor, use **Inspecionar elemento** no navegador. Ele precisa encontrar exatamente um container, como `main`, `section` ou `div`. Escolha um elemento dentro de `body`, não `html` ou `body` diretamente.
+Para escolher o seletor, use **Inspecionar elemento** no navegador. Ele precisa encontrar exatamente um container, como `main`, `section` ou `div`. Use `body` para capturar a página visível completa ou `html` para incluir também scripts originais do head. Isso captura uma página, sem percorrer automaticamente outras URLs do site.
 
 Para uso frequente: `npm install -g uiport`, depois `uiport --help`. Fixe uma versão quando precisar reproduzir uma captura; `npx uiport@latest` acompanha versões futuras.
 
@@ -67,9 +67,9 @@ Abra `http://127.0.0.1:4174`. A pasta de saída pode ser movida e servida novame
 | `browser install` | Instala Chromium compatível com a versão de Playwright do pacote |
 | `--help` / `--version` | Mostra ajuda ou versão sem abrir navegador |
 
-Capture e validate aceitam `--viewports`, `--wait`, `--timeout`, `--max-scroll-steps`, `--locale`, `--color-scheme` e `--json`. Padrões: `1440x900,1024x768,768x1024,375x812`, espera de 1200 ms, prazo total de 120 s, 80 passos de rolagem, idioma `en-US` e tema `light`. Para páginas brasileiras, use `--locale pt-BR` nos dois comandos.
+Capture e validate aceitam `--viewports`, `--wait`, `--timeout`, `--max-scroll-steps`, `--locale`, `--color-scheme` e `--json`. Padrões: `1440x900,1024x768,768x1024,375x812`, espera de 1200 ms, prazo total de 120 s, 80 passos de rolagem, idioma `pt-BR` e tema `light`. Use o mesmo `--locale` nos dois comandos quando precisar de outro idioma.
 
-A captura limita recursos copiados a 20 MiB por arquivo e 100 MiB no total, configuráveis por `--max-resource-mb` e `--max-total-mb`. Esses limites são do downloader da exportação, não da memória completa do navegador que abre a origem. Cada download também tem prazo de até 15 s.
+A captura limita recursos copiados a 20 MiB por arquivo e 100 MiB no total, configuráveis por `--max-resource-mb` e `--max-total-mb`. A captura reaproveita respostas recebidas pelo navegador, incluindo recursos que exigem Referer, e usa fetch HTTP como fallback. Os orçamentos limitam bytes retidos e baixados pela exportação, não a memória completa do navegador nem o buffer temporário materializado pelo Playwright. O fetch de fallback tem prazo de até 15 s.
 
 `UIPORT_BROWSER_PATH` define o executável do navegador. Sem override, o UIport tenta Chromium compatível, Chrome e Edge instalados, incluindo macOS.
 
@@ -80,9 +80,11 @@ A captura limita recursos copiados a 20 MiB por arquivo e 100 MiB no total, conf
 - **Retorno 1:** falha operacional ou falha das verificações pedidas no validate.
 - **Validate retorna 0:** verificações visuais/de rede passaram nos estados observados. Comportamento continua `not-tested`.
 
-`--json` retorna um único resultado no stdout para capture/validate/browser; progresso vai para stderr. `serve --json` emite um único documento de início e permanece ativo até ser encerrado. Automações precisam tratar retorno 2 separadamente. A captura não sobrescreve uma pasta de saída existente com conteúdo.
+`--json` retorna um único resultado no stdout para capture/validate/browser; progresso vai para stderr. `serve --json` emite um único documento de início e permanece ativo até ser encerrado. Automações precisam tratar retorno 2 separadamente. A captura não sobrescreve uma pasta de saída existente com conteúdo. Código de origem preservado gera `SOURCE_RUNTIME_UNVERIFIED`: teste suas interações; igualdade de screenshots não comprova que todas as dependências foram recuperadas.
 
-A comparação visual desativa animações, aceita por padrão 2% de diferença de pixels e até 5 px de diferença de altura. Ela não comprova cliques, hover, efeitos de scroll ou estado de framework. Requisições externas da saída são bloqueadas por padrão, inclusive outra porta de localhost. `--allow-external` permite essas requisições e desativa esse teste de funcionamento sem rede externa. Consulte os casos suportados em [docs/support.md](docs/support.md).
+A comparação visual desativa animações, aceita por padrão 2% de diferença de pixels e até 5 px de diferença de altura. Ela não comprova cliques, hover, efeitos de scroll ou estado de framework. Requisições externas da saída são bloqueadas por padrão, inclusive outra porta de localhost. `--allow-external` permite essas requisições e desativa esse teste de funcionamento sem rede externa. O `validate` também reconhece o marcador de extrações do protótipo sem reescrever a pasta; novas extrações usam os marcadores UIport. Consulte os casos suportados em [docs/support.md](docs/support.md).
+
+Compatibilidade com o protótipo e mudanças intencionais de comandos/limites: [notas de migração](docs/migration.md).
 
 ## Usar com agentes e contribuir
 

@@ -5,6 +5,8 @@ import { parseFragment, serialize } from "parse5";
 import parseSrcset from "parse-srcset";
 import { extractSection } from "./dom.mjs";
 import { resources } from "./resources.mjs";
+import { browserResources } from "./browser-resources.mjs";
+import { contextualCss } from "./css-context.mjs";
 import {
   inspectOutput,
   stageOutput,
@@ -39,6 +41,18 @@ export async function capture(options) {
       serviceWorkers: "block",
     });
     const page = await context.newPage();
+    const cache = browserResources(page, options, life.signal);
+    life.add(async () => cache.dispose());
+    stage = await stageOutput(options.directory);
+    await fs.mkdir(path.join(stage.directory, "assets"));
+    const assets = resources(
+      stage.directory,
+      options,
+      life.signal,
+      limitations,
+      cache,
+    );
+    let cssContext;
     page.setDefaultTimeout(Math.min(10000, options.timeoutMs));
     page.on("pageerror", () =>
       limitation(
@@ -78,8 +92,39 @@ export async function capture(options) {
           `Selector must resolve to exactly one element; found ${count}`,
         );
       await root.scrollIntoViewIfNeeded();
-      captures.push(await page.evaluate(extractSection, selector));
+      const snapshot = await page.evaluate(extractSection, {
+        selector,
+        omitScripts: options.omitScripts,
+      });
+      captures.push(snapshot);
+      await cache.settle();
+      if (!cssContext) {
+        const cssParts = [];
+        for (const sheet of snapshot.stylesheets.filter((s) => !s.disabled)) {
+          life.check();
+          const resource =
+            sheet.text === null && sheet.href
+              ? await assets.download(sheet.href)
+              : null;
+          const text = sheet.text ?? resource?.body.toString("utf8");
+          if (text == null) {
+            limitation(
+              limitations,
+              "STYLESHEET_UNAVAILABLE",
+              "An original stylesheet could not be read",
+            );
+            continue;
+          }
+          const css = await assets.css(text, resource?.url || sheet.baseUrl);
+          cssParts.push(
+            sheet.media ? `@media ${sheet.media} {\n${css}\n}` : css,
+          );
+        }
+        cssContext = contextualCss(cssParts);
+      }
+      await cssContext.observe(page, snapshot);
     }
+    await cache.settle();
     await close();
     life.check();
     const primary = captures[0];
@@ -92,8 +137,12 @@ export async function capture(options) {
     if (captures.some((c) => c.sourceScripts || c.removedExecutable))
       limitation(
         limitations,
-        "SOURCE_RUNTIME_OMITTED",
-        "Source scripts and executable attributes are omitted; JavaScript interactions require manual review",
+        options.omitScripts
+          ? "SOURCE_RUNTIME_OMITTED"
+          : "SOURCE_RUNTIME_UNVERIFIED",
+        options.omitScripts
+          ? "Source scripts and executable attributes are omitted by request"
+          : "Source scripts and inline handlers are retained where captured; external initialization and runtime dependencies still require manual validation",
       );
     if (captures.some((c) => c.featureCounts.canvas))
       limitation(
@@ -113,33 +162,7 @@ export async function capture(options) {
         "EMBED_OMITTED",
         "Embedded documents are disabled in the output",
       );
-    stage = await stageOutput(options.directory);
-    await fs.mkdir(path.join(stage.directory, "assets"));
-    const assets = resources(
-      stage.directory,
-      options,
-      life.signal,
-      limitations,
-    );
-    const parts = [];
-    for (const sheet of primary.stylesheets.filter((s) => !s.disabled)) {
-      life.check();
-      const resource =
-        sheet.text === null && sheet.href
-          ? await assets.download(sheet.href)
-          : null;
-      const text = sheet.text ?? resource?.body.toString("utf8");
-      if (text == null) {
-        limitation(
-          limitations,
-          "STYLESHEET_UNAVAILABLE",
-          "An original stylesheet could not be read",
-        );
-        continue;
-      }
-      const css = await assets.css(text, resource?.url || sheet.baseUrl);
-      parts.push(sheet.media ? `@media ${sheet.media} {\n${css}\n}` : css);
-    }
+    const parts = cssContext.render();
     const ancestorOpen = primary.ancestors
       .map((a) => `<${a.tag}${serializeAttributes(a.attributes)}>`)
       .join("\n");
@@ -148,6 +171,19 @@ export async function capture(options) {
       .map((a) => `</${a.tag}>`)
       .join("\n");
     const fragment = parseFragment(ancestorOpen + primary.html + ancestorClose);
+    const runtimeHtml = primary.runtimeScripts
+      .map((script) => {
+        const attrs = [
+          { name: "src", value: script.src },
+          ...(script.type ? [{ name: "type", value: script.type }] : []),
+          ...(script.async ? [{ name: "async", value: "" }] : []),
+          ...(script.defer ? [{ name: "defer", value: "" }] : []),
+          ...(script.noModule ? [{ name: "nomodule", value: "" }] : []),
+        ];
+        return `<script${serializeAttributes(attrs)}></script>`;
+      })
+      .join("\n");
+    const head = parseFragment(runtimeHtml + primary.headHtml);
     async function rewrite(node) {
       if (node.attrs) {
         for (const attr of node.attrs) {
@@ -179,9 +215,11 @@ export async function capture(options) {
       if (node.content) await rewrite(node.content);
     }
     await rewrite(fragment);
+    await rewrite(head);
     await rewrite({ attrs: primary.htmlAttributes });
     await rewrite({ attrs: primary.bodyAttributes });
-    // Keep custom properties in their original rules so media queries can override them.
+    // Context-dependent custom properties retain their original conditions;
+    // ordinary inherited/responsive variables are never frozen to one viewport.
     const animations = primary.animations.filter(
       (a) =>
         a.kind === "Animation" &&
@@ -208,8 +246,9 @@ export async function capture(options) {
 <html lang="${escapeHtml(locale)}"${serializeAttributes(primary.htmlAttributes)}>
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>UIport — extracted section</title>
+<title>${escapeHtml(primary.title || "UIport — extracted section")}</title>
 <style>${parts.join("\n").replaceAll("</style", "<\\/style")}</style>
+${serialize(head)}
 </head>
 <body${serializeAttributes(primary.bodyAttributes)}>
 ${serialize(fragment)}

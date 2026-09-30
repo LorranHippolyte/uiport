@@ -60,6 +60,8 @@ export function extensionFor(url, contentType = "") {
   const mime = contentType.split(";")[0].toLowerCase();
   const extension = new Map([
     ["text/css", ".css"],
+    ["text/javascript", ".js"],
+    ["application/javascript", ".js"],
     ["image/svg+xml", ".svg"],
     ["image/png", ".png"],
     ["image/jpeg", ".jpg"],
@@ -184,6 +186,7 @@ export function mimeForFile(filePath) {
       [".svg", "image/svg+xml"],
       [".png", "image/png"],
       [".jpg", "image/jpeg"],
+      [".jpeg", "image/jpeg"],
       [".webp", "image/webp"],
       [".avif", "image/avif"],
       [".gif", "image/gif"],
@@ -193,7 +196,8 @@ export function mimeForFile(filePath) {
       [".mp4", "video/mp4"],
       [".webm", "video/webm"],
       [".json", "application/json"],
-    ]).get(path.extname(filePath)) || "application/octet-stream"
+      [".wasm", "application/wasm"],
+    ]).get(path.extname(filePath).toLowerCase()) || "application/octet-stream"
   );
 }
 const within = (root, file) => {

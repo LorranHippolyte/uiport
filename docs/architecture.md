@@ -17,8 +17,10 @@ flowchart LR
 - `scripts/browser-process.mjs` / `browser-host.mjs`: own browser startup in a child process, allowing deadline/cancellation cleanup before Playwright returns a browser handle. Normal shutdown asks Playwright to close through IPC and waits for cleanup. Bounded signal/process-tree termination handles unresponsive browsers; the parent removes its dedicated temporary directory even after forced cancellation.
 - `scripts/options.mjs`: strict arguments, URL/number/viewport validation.
 - `scripts/capture.mjs`: capture orchestration, staged filesystem output, metadata and exact-data WAAPI replay.
-- `scripts/dom.mjs`: browser-side DOM serialization; removes source script/handler execution, handles open shadow trees, records styles and animation data.
-- `scripts/resources.mjs`: streamed size/deadline limits, hash-named assets, PostCSS import processing and URL rewriting. Public resources are fetched without imported browser sessions.
+- `scripts/dom.mjs`: browser-side DOM serialization; preserves source scripts/handlers by default (explicit --omit-scripts opt-out), supports section/body/html roots, handles open shadow trees, records styles and animation data.
+- `scripts/resources.mjs`: streamed size/deadline limits, hash-named assets, PostCSS import processing and URL rewriting. Responses from the capture browser are preferred; independent HTTP fetch is a fallback. No personal browser session is imported.
+- `scripts/browser-resources.mjs`: bounded retention of response bodies and redirect aliases from the fresh source context; Playwright body materialization is not a streaming memory limit.
+- `scripts/css-context.mjs`: restores custom-property declarations whose selectors lost structural context, preserving their specificity, order and enclosing conditions instead of freezing computed viewport values.
 - `scripts/validate.mjs`: isolated source/output contexts, screenshot comparison, resource and execution diagnostics. Does not infer behavioral equivalence.
 - `scripts/lib.mjs`: browser discovery, lifecycle cleanup, static server confinement, serialization and staging utilities.
 - `examples/`: original MIT-licensed material for onboarding and repeatable tests.

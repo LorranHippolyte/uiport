@@ -121,7 +121,13 @@ export async function validate(options) {
           waitUntil: "domcontentloaded",
         });
         await waitForPageStable(local, options.settleMs);
-        const localRoot = local.locator('[data-uiport-root="true"]');
+        // Legacy root markers remain supported for existing user exports.
+        const rootSelector = (await local
+          .locator('[data-uiport-root="true"]')
+          .count())
+          ? '[data-uiport-root="true"]'
+          : '[data-effect-extractor-root="true"]';
+        const localRoot = local.locator(rootSelector);
         if ((await localRoot.count()) !== 1)
           throw new Error("UIport extraction root is missing or ambiguous");
         const localBox = await localRoot.boundingBox();

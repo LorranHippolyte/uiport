@@ -12,8 +12,14 @@ import {
   limitation,
 } from "./lib.mjs";
 
-/** @param {string} directory @param {import('./options.mjs').optionsFor extends (...args: any[]) => infer T ? T : never} options @param {AbortSignal} signal @param {{code:string,message:string}[]} limitations */
-export function resources(directory, options, signal, limitations) {
+/** @param {string} directory @param {import('./options.mjs').optionsFor extends (...args: any[]) => infer T ? T : never} options @param {AbortSignal} signal @param {{code:string,message:string}[]} limitations @param {{get:(url:string)=>Promise<any>} | undefined} [browserCache] */
+export function resources(
+  directory,
+  options,
+  signal,
+  limitations,
+  browserCache,
+) {
   const downloaded = new Map();
   let consumed = 0;
   const localPaths = new Set();
@@ -26,6 +32,17 @@ export function resources(directory, options, signal, limitations) {
     try {
       if (consumed >= options.maxTotalBytes)
         throw new Error("Total resource budget exceeded");
+      const cached = await browserCache?.get(url);
+      if (cached) {
+        if (
+          cached.body.length > options.maxResourceBytes ||
+          consumed + cached.body.length > options.maxTotalBytes
+        )
+          throw new Error("Resource size limit exceeded");
+        consumed += cached.body.length;
+        downloaded.set(url, cached);
+        return cached;
+      }
       response = await fetch(url, {
         signal: AbortSignal.any([
           signal,

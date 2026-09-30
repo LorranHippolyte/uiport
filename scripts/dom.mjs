@@ -1,12 +1,13 @@
 // Runs inside the source browser. No Node state is captured by this function.
-export function extractSection(targetSelector) {
+export function extractSection({
+  selector: targetSelector,
+  omitScripts = false,
+}) {
   const target = document.querySelector(targetSelector);
   if (!target) throw new Error("Target disappeared before capture.");
   if (
     [
-      "HTML",
       "HEAD",
-      "BODY",
       "SCRIPT",
       "STYLE",
       "LINK",
@@ -29,9 +30,10 @@ export function extractSection(targetSelector) {
   const clean = (element) => {
     for (const attr of [...element.attributes]) {
       if (
-        /^on/i.test(attr.name) ||
+        (omitScripts && /^on/i.test(attr.name)) ||
         ["srcdoc", "autofocus", "ping"].includes(attr.name) ||
         (["href", "xlink:href", "action", "formaction"].includes(attr.name) &&
+          omitScripts &&
           unsafe(attr.value))
       ) {
         element.removeAttribute(attr.name);
@@ -62,6 +64,13 @@ export function extractSection(targetSelector) {
     element.setAttribute("data-uiport-id", `up-${index}`),
   );
   target.setAttribute("data-uiport-root", "true");
+  let parent = target.parentElement;
+  let ancestorId = 0;
+  while (parent) {
+    parent.setAttribute("data-uiport-id", `up-ancestor-${ancestorId++}`);
+    parent = parent.parentElement;
+  }
+  let preservedScripts = 0;
 
   const absoluteUrl = (value, base = document.baseURI) => {
     if (
@@ -88,11 +97,13 @@ export function extractSection(targetSelector) {
   const cloneDeep = (source) => {
     if (!(source instanceof Element)) return source.cloneNode(true);
     if (
-      ["SCRIPT", "BASE", "META", "LINK"].includes(source.tagName.toUpperCase())
+      ["BASE", "META", "LINK"].includes(source.tagName.toUpperCase()) ||
+      (omitScripts && source.tagName.toUpperCase() === "SCRIPT")
     ) {
       removedExecutable++;
       return document.createTextNode("");
     }
+    if (source.tagName.toUpperCase() === "SCRIPT") preservedScripts++;
     const clone = clean(source.cloneNode(false));
     for (const name of [
       "src",
@@ -333,9 +344,45 @@ export function extractSection(targetSelector) {
     }
   }
 
-  const html = cloneDeep(target).outerHTML;
+  const rootTag = target.tagName.toLowerCase();
+  const wholeDocument = rootTag === "html";
+  const fullPage = wholeDocument || rootTag === "body";
+  const content = cloneDeep(fullPage ? document.body : target);
+  const html = fullPage ? content.innerHTML : content.outerHTML;
+  // A full-document selection also preserves original head scripts/data. CSS,
+  // base URLs and the viewport are handled by the export's document builder.
+  const headHtml = wholeDocument
+    ? [...document.head.children]
+        .filter((node) => ["SCRIPT", "NOSCRIPT"].includes(node.tagName))
+        .map((node) => cloneDeep(node).outerHTML || "")
+        .join("\n")
+    : "";
+  const visualLibraryPattern =
+    /(gsap|scrolltrigger|lottie|aos(?:\.|-|\/)|swiper|splide|lenis|anime(?:\.min)?\.js|motion(?:\.min)?\.js|three(?:\.min)?\.js|pixi|webflow)/i;
+  const runtimeScripts =
+    omitScripts || wholeDocument
+      ? []
+      : [...document.scripts]
+          .filter(
+            (script) =>
+              script.src &&
+              !target.contains(script) &&
+              visualLibraryPattern.test(script.src),
+          )
+          .map((script) => ({
+            src: script.src,
+            type: script.type || "",
+            async: script.async,
+            defer: script.defer,
+            noModule: script.noModule,
+          }));
   return {
     html,
+    rootTag,
+    headHtml,
+    title: document.title,
+    preservedScripts,
+    runtimeScripts,
     structure: deepElements
       .map((el) => `${el.tagName}:${el.id}:${el.children.length}`)
       .join("|"),

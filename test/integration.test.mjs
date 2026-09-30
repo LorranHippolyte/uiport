@@ -245,7 +245,10 @@ test(
     );
     const source = await local(t, sourceDir),
       out = path.join(temp, "out");
-    const captured = await cli(captureArgs(source.url, out));
+    const captured = await cli([
+      ...captureArgs(source.url, out),
+      "--omit-scripts",
+    ]);
     assert.equal(captured.code, 2, captured.stdout + captured.stderr);
     assert.ok(
       result(captured).limitations.some(
