@@ -269,7 +269,7 @@ test(
     const source = await fixture(t, (_req, res) => {
       res.setHeader("content-type", "text/html; charset=utf-8");
       res.end(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-body{margin:0}#hero{background:var(--accent,blue);color:var(--ordered,blue)}.box{width:var(--size,1px);height:20px}
+body{margin:0}#hero{background:var(--accent,blue);color:var(--ordered,blue);border-color:var(--layered,blue)}.box{width:var(--size,1px);height:20px}
 #trigger + #hero, #unused {
   & {--accent:rgb(255,0,0)}
   --accent:rgb(128,0,128);
@@ -277,6 +277,7 @@ body{margin:0}#hero{background:var(--accent,blue);color:var(--ordered,blue)}.box
   @media(max-width:600px) { @supports(display:grid) { --accent:rgb(0,128,0); } }
 }
 #hero { #trigger + & {--ordered:red} &#hero {--ordered:green} }
+#hero { @layer { #trigger + & {--layered:red} } @layer named { &#hero {--layered:green} } }
 </style><div id="trigger"></div><section id="hero"><div class="box" data-label="&"></div></section>`);
     });
     const out = path.join(source.directory, "out");
@@ -299,6 +300,7 @@ body{margin:0}#hero{background:var(--accent,blue);color:var(--ordered,blue)}.box
           await page.locator("#hero").evaluate((el) => ({
             color: getComputedStyle(el).backgroundColor,
             ordered: getComputedStyle(el).color,
+            layered: getComputedStyle(el).borderTopColor,
             width: getComputedStyle(el.querySelector(".box")).width,
           })),
         );
@@ -306,6 +308,7 @@ body{margin:0}#hero{background:var(--accent,blue);color:var(--ordered,blue)}.box
       assert.deepEqual(values[0], {
         color: width <= 600 ? "rgb(0, 128, 0)" : "rgb(128, 0, 128)",
         ordered: "rgb(0, 128, 0)",
+        layered: "rgb(0, 128, 0)",
         width: `${width * 0.1}px`,
       });
       assert.deepEqual(values[1], values[0]);

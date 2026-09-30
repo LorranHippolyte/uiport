@@ -1,4 +1,5 @@
 import postcss from "postcss";
+import { randomUUID } from "node:crypto";
 
 // Inspect only selector context. No stylesheet or script is executed in this
 // detached document. Keep original declarations, specificity and enclosing
@@ -155,6 +156,10 @@ export function contextualCss(stylesheets) {
           parent = parent.parent
         )
           if (parent.type === "atrule") {
+            // Reopening an anonymous layer would create a different, later
+            // layer. Give this original layer a shared private identity first.
+            if (parent.name.toLowerCase() === "layer" && !parent.params.trim())
+              parent.params = `uiport-context-${randomUUID()}`;
             const wrapper = parent.clone({ nodes: [] });
             wrapper.append(fallback);
             fallback = wrapper;
