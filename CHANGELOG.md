@@ -2,7 +2,7 @@
 
 Notable changes are documented here. Versions follow Semantic Versioning.
 
-## [Unreleased] — 0.1.0 candidate
+## [0.1.0] — 2026-09-30
 
 ### Added
 - CLI capture, serve, validate and explicit browser installation; JSON diagnostics.
@@ -21,5 +21,3 @@ Notable changes are documented here. Versions follow Semantic Versioning.
 
 ### Changed
 - Standardize the agent guide as `uiport.md` and browser configuration as `UIPORT_BROWSER_PATH` before the first release.
-
-This version has not yet been published to npm. Merge, release date and publication require maintainer approval.
