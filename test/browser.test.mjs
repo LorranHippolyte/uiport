@@ -4,12 +4,55 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { createServer } from "node:http";
 import { cli, project, result } from "./helpers.mjs";
 import {
   lifecycle,
   launchChromium,
   safeErrorMessage,
 } from "../scripts/lib.mjs";
+
+test(
+  "browser installation preserves download failures and JSON output",
+  { timeout: 30000 },
+  async (t) => {
+    const temp = await fs.mkdtemp(
+      path.join(os.tmpdir(), "uiport-install-failure-"),
+    );
+    t.after(() => fs.rm(temp, { recursive: true, force: true }));
+    let requests = 0;
+    const server = createServer((_request, response) => {
+      requests++;
+      response.writeHead(503).end("Installer test: download unavailable");
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    t.after(() => new Promise((resolve) => server.close(resolve)));
+    for (const json of [false, true]) {
+      const run = await cli(
+        ["browser", "install", ...(json ? ["--json"] : [])],
+        {
+          cwd: temp,
+          env: {
+            ...process.env,
+            PLAYWRIGHT_BROWSERS_PATH: path.join(temp, "browsers"),
+            PLAYWRIGHT_DOWNLOAD_HOST: `http://127.0.0.1:${server.address().port}`,
+            PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST: `http://127.0.0.1:${server.address().port}`,
+          },
+          timeout: 12000,
+        },
+      );
+      assert.equal(run.code, 1, run.stdout + run.stderr);
+      assert.match(run.stderr, /503/);
+      assert.doesNotMatch(
+        run.stdout + run.stderr,
+        /Chromium installation complete/,
+      );
+      if (json)
+        assert.deepEqual(result(run), { command: "browser", status: "failed" });
+    }
+    assert.ok(requests > 0);
+  },
+);
 
 test("operational messages redact every URL and omit verbose call logs", () => {
   const error = new Error(

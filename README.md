@@ -22,7 +22,7 @@ UIport keeps original CSS conservatively, including rules outside the selected s
 
 Requires **Node.js 22.14+**; Node 24 LTS recommended. Chromium is installed explicitly, or UIport can use your installed Chrome/Edge. Your existing browser sessions are not imported.
 
-Install from npm:
+Run these commands in any directory, including an empty one. `npx` fetches UIport automatically; you do not need a `package.json` or `npm install` in that directory. `browser install` prepares Chromium in Playwright's shared browser cache.
 
 ```sh
 npx uiport@0.1.0 browser install
