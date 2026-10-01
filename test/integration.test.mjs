@@ -380,7 +380,7 @@ test(
   async (t) => {
     const temp = await fixture(t),
       source = await local(t, path.join(project, "examples/responsive-hero"));
-    assert.equal((await cli(["--version"])).stdout.trim(), "0.1.0");
+    assert.equal((await cli(["--version"])).stdout.trim(), "0.1.1");
     assert.equal((await cli(["--help"])).code, 0);
     for (const [selector, extra] of [
       ["#missing", []],

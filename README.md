@@ -25,10 +25,10 @@ Requires **Node.js 22.14+**; Node 24 LTS recommended. Chromium is installed expl
 Run these commands in any directory, including an empty one. `npx` fetches UIport automatically; you do not need a `package.json` or `npm install` in that directory. `browser install` prepares Chromium in Playwright's shared browser cache.
 
 ```sh
-npx uiport@0.1.0 browser install
-npx uiport@0.1.0 capture --url "https://your-site.example" --selector "#hero" --out ./my-section
-npx uiport@0.1.0 serve --dir ./my-section
-npx uiport@0.1.0 validate --url "https://your-site.example" --selector "#hero" --dir ./my-section
+npx uiport@0.1.1 browser install
+npx uiport@0.1.1 capture --url "https://your-site.example" --selector "#hero" --out ./my-section
+npx uiport@0.1.1 serve --dir ./my-section
+npx uiport@0.1.1 validate --url "https://your-site.example" --selector "#hero" --dir ./my-section
 ```
 
 Choose the selector using your browser's **Inspect element** tool. It must match exactly one container, such as `main`, `section` or a `div`. Use `body` to capture the whole visible page, or `html` to include original head scripts as well. This captures one page, not a multi-page crawl.

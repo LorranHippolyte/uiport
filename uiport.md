@@ -90,7 +90,7 @@ node bin/cli.mjs capture --url "<URL>" --selector "<SELETOR>" --out "./extractio
 
 Ajuste `--locale`, `--color-scheme` e `--viewports` conforme a origem e use os mesmos valores na validação. A captura não sobrescreve uma pasta existente com conteúdo. `UIPORT_BROWSER_PATH` permite escolher o executável do navegador; a instalação do Chromium é explícita.
 
-Quando `uiport@0.1.0` estiver publicado, os mesmos subcomandos poderão ser executados com `npx uiport@0.1.0` no lugar de `node bin/cli.mjs`. Não presuma que o pacote já está disponível no registro. Consulte os [comandos e opções](README.pt-BR.md) ou execute `node bin/cli.mjs --help`.
+Os mesmos subcomandos podem ser executados com `npx uiport@0.1.1` no lugar de `node bin/cli.mjs`. Ao testar uma versão ainda não publicada, use o checkout local. Consulte os [comandos e opções](README.pt-BR.md) ou execute `node bin/cli.mjs --help`.
 
 Leia o diagnóstico antes de entregar:
 
