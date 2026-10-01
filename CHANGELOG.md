@@ -6,6 +6,7 @@ Notable changes are documented here. Versions follow Semantic Versioning.
 
 ### Fixed
 - Avoid Playwright's misleading project-dependency warning when installing Chromium through `npx uiport`; report successful browser installation explicitly.
+- Keep browser installation working when Node defaults to ES modules through `NODE_OPTIONS`.
 - Clarify that the `npx` workflow works in an empty directory without `package.json` or `npm install`.
 
 ## [0.1.0] — 2026-09-30

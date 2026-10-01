@@ -63,6 +63,7 @@ try {
       const child = spawn(
         process.execPath,
         [
+          "--input-type=commonjs",
           "--eval",
           // This is UIport's bundled installer, not a bare npx Playwright
           // invocation. Give the CLI our command name so its _npx path

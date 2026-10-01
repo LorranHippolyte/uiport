@@ -9,10 +9,10 @@ import { startStaticServer } from "../scripts/lib.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uiport-package-"));
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-async function run(command, args, cwd) {
+async function run(command, args, cwd, env = {}) {
   const child = spawn(command, args, {
     cwd,
-    env: { ...process.env, PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1" },
+    env: { ...process.env, PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1", ...env },
     shell: process.platform === "win32" && command === npm,
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -66,19 +66,37 @@ try {
   const cli = path.join(installed, "bin", "cli.mjs");
   const emptyProject = path.join(temporary, "empty-project");
   await fs.mkdir(emptyProject);
-  assert.match(
-    await run(process.execPath, [cli, "browser", "install"], emptyProject),
-    /Chromium installation complete/,
-  );
-  assert.deepEqual(
-    JSON.parse(
+  const installEnvironments = [{}];
+  // Node 22/24 support this option; newer runtimes may remove it.
+  if (process.allowedNodeEnvironmentFlags.has("--experimental-default-type"))
+    installEnvironments.push({
+      NODE_OPTIONS:
+        `${process.env.NODE_OPTIONS ?? ""} --experimental-default-type=module`.trim(),
+    });
+  for (const env of installEnvironments) {
+    assert.match(
       await run(
         process.execPath,
-        [cli, "browser", "install", "--json"],
+        [cli, "browser", "install"],
         emptyProject,
+        env,
       ),
-    ),
-    { command: "browser", status: "complete" },
+      /Chromium installation complete/,
+    );
+    assert.deepEqual(
+      JSON.parse(
+        await run(
+          process.execPath,
+          [cli, "browser", "install", "--json"],
+          emptyProject,
+          env,
+        ),
+      ),
+      { command: "browser", status: "complete" },
+    );
+  }
+  console.log(
+    `Browser installation passed in ${installEnvironments.length} Node environment(s), in text and JSON modes.`,
   );
   assert.deepEqual(await fs.readdir(emptyProject), []);
   assert.match(
