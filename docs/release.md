@@ -24,6 +24,6 @@ The bootstrap is not the official release and does not have the same provenance 
 
 ## Verify and announce
 
-Confirm the registry reports the intended version under `latest`, the expected maintainer and repository, and an attestation bound to the reviewed GitHub commit. Then exercise `npx uiport@0.1.0` capture/serve/validate in a clean consumer directory, not only help. Create the corresponding GitHub release from the same tag. Use the prepared launch kit after receiving authorization to send community messages.
+Confirm the registry reports the intended version under `latest`, the expected maintainer and repository, and an attestation bound to the reviewed GitHub commit. Then exercise the version being released (for example, `npx uiport@0.1.1`) capture/serve/validate in a clean consumer directory, not only help. Create the corresponding GitHub release from the same tag. Use the prepared launch kit after receiving authorization to send community messages.
 
 Each npm name/version pair is immutable after publication. Stop on mismatched version, failing checks or missing review; do not reuse a published version.

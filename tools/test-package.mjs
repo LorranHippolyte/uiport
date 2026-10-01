@@ -111,7 +111,7 @@ try {
         consumer,
       )
     ).trim(),
-    "0.1.0",
+    "0.1.1",
   );
   server = await startStaticServer(
     path.join(installed, "examples", "responsive-hero"),
@@ -169,7 +169,7 @@ try {
   );
   assert.equal(
     (await run(process.execPath, [globalCli, "--version"], temporary)).trim(),
-    "0.1.0",
+    "0.1.1",
   );
   console.log(
     `Tarball verified: ${pack.files.length} allowlisted files, ${pack.size} bytes; local/global install, npm exec, browser installation from an empty project, capture and offline validation passed outside the checkout.`,

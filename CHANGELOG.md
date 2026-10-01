@@ -2,7 +2,7 @@
 
 Notable changes are documented here. Versions follow Semantic Versioning.
 
-## [Unreleased]
+## [0.1.1] — 2026-10-01
 
 ### Fixed
 - Avoid Playwright's misleading project-dependency warning when installing Chromium through `npx uiport`; report successful browser installation explicitly.

@@ -25,10 +25,10 @@ Requer **Node.js 22.14+**; recomendamos Node 24 LTS. O Chromium é instalado exp
 Execute os comandos em uma pasta de sua escolha, que pode estar vazia. O `npx` obtém o UIport automaticamente; não é necessário criar um `package.json` nem rodar `npm install` nessa pasta. `browser install` prepara o Chromium no cache compartilhado do Playwright.
 
 ```sh
-npx uiport@0.1.0 browser install
-npx uiport@0.1.0 capture --url "https://seu-site.example" --selector "#hero" --out ./minha-secao
-npx uiport@0.1.0 serve --dir ./minha-secao
-npx uiport@0.1.0 validate --url "https://seu-site.example" --selector "#hero" --dir ./minha-secao
+npx uiport@0.1.1 browser install
+npx uiport@0.1.1 capture --url "https://seu-site.example" --selector "#hero" --out ./minha-secao
+npx uiport@0.1.1 serve --dir ./minha-secao
+npx uiport@0.1.1 validate --url "https://seu-site.example" --selector "#hero" --dir ./minha-secao
 ```
 
 Para escolher o seletor, use **Inspecionar elemento** no navegador. Ele precisa encontrar exatamente um container, como `main`, `section` ou `div`. Use `body` para capturar a página visível completa ou `html` para incluir também scripts originais do head. Isso captura uma página, sem percorrer automaticamente outras URLs do site.

@@ -11,7 +11,7 @@ A ideia nasceu de uma necessidade prática: começar a partir de uma implementa�
 O fluxo é: capturar → abrir localmente → comparar → adaptar. A ferramenta mostra limitações de captura e diferencia comparação visual de comportamento. Animações CSS e alguns casos de Web Animations são suportados; ela não promete recuperar qualquer runtime ou gerar uma aplicação React automaticamente.
 
 ```sh
-npx uiport@0.1.0 --help
+npx uiport@0.1.1 --help
 ```
 
 No repositório há dois exemplos autorais, documentação em português e inglês e uma skill para agentes. Código MIT, sem conta ou chave de IA.

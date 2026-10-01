@@ -8,7 +8,7 @@ description: Capture a rendered web section as editable HTML, original CSS and l
 Use for a request to extract an existing web section into local files. Use pages the user owns or has permission to reuse. Do not redesign or invent replacement effects.
 
 1. Inspect the requested URL and choose one CSS selector matching a section container, or body/html for a full page. Include wrappers/decorations that belong to it; html also includes original head scripts.
-2. Use the installed CLI or source checkout. Once published, `npx uiport@0.1.0` is the pinned form. Before the first release, use `node bin/cli.mjs` from the checkout; never assume an unpublished npm package exists.
+2. Use the installed CLI or source checkout. `npx uiport@0.1.1` is the pinned form. When testing an unpublished version, use `node bin/cli.mjs` from its checkout.
 3. If needed, install the matching browser with `uiport browser install`. No browser download is hidden inside capture.
 4. Run `uiport capture --url "URL" --selector "SELECTOR" --out "NEW_DIRECTORY" --json`. The default locale is pt-BR. Match locale/color scheme/viewports to the requested source. Never overwrite an existing nonempty directory.
 5. Read the result. Exit 0 means no known reported limitations, not universal fidelity. Exit 2 means a partial artifact exists; inspect every limitation. Exit 1 means failure. Stdout is JSON, progress is stderr.
