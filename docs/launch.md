@@ -1,6 +1,6 @@
 # Launch kit — prepared, not posted
 
-Publish after the approved GitHub/npm release. Replace candidate status in README and set the changelog release date before tagging. No announcement has been sent by the implementation process.
+The 0.1.1 release is published on npm and GitHub (2026-10-01). The announcement below has not been sent: sending community messages requires explicit maintainer authorization. Update the version and date here when a new release ships, and keep the script synchronized with the current README.
 
 ## Community post (Português)
 

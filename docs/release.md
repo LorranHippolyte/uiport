@@ -12,15 +12,13 @@ Every release must use a reviewed commit on main and explicit maintainer approva
 
 The workflow uses Node 24, a compatible npm CLI, GitHub-hosted runners and `id-token: write`. No NPM_TOKEN is stored. Current npm trusted publishing requires npm >=11.5.1 and Node >=22.14; recheck the [official documentation](https://docs.npmjs.com/trusted-publishers/) before release. Provenance is expected from OIDC for this public repository.
 
-## First-package bootstrap
+The workflow publishes in two situations: a reviewed `v*` tag, or a manual run whose `version` input equals the version in `package.json`. Both require the commit to be on `main`, and both refuse to publish a version that already exists in the registry. The `release` environment approval remains the final gate in either path.
 
-Trusted publisher settings may require an existing package. If the registry supports creating that binding first, publish 0.1.0 directly via OIDC. Otherwise, after explicit maintainer approval:
+## First-package bootstrap (historical)
 
-- Publish a reviewed `0.0.0-bootstrap.0` package under dist-tag `bootstrap` through a maintainer-controlled, 2FA-authenticated session.
-- Configure the trusted publisher on that package.
-- Publish the reviewed 0.1.0 tag via the protected OIDC workflow.
+The first release required a bootstrap, because trusted publisher settings normally need an existing package. For `0.1.0` the maintainer published a reviewed `0.0.0-bootstrap.0` package under the `bootstrap` dist-tag through a maintainer-controlled, 2FA-authenticated session, configured the trusted publisher, and then published `0.1.0` through the protected OIDC workflow.
 
-The bootstrap is not the official release and does not have the same provenance guarantee. Never silently replace the official release with a manual publish, create a long-lived automation token, or publish a different brand if the package name is taken.
+That bootstrap is not an official release and did not have the same provenance guarantee. Current releases do not repeat it. Never silently replace an official release with a manual publish, create a long-lived automation token, or publish a different brand if the package name is taken.
 
 ## Verify and announce
 
