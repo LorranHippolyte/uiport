@@ -75,7 +75,7 @@ O objetivo da revisão manual é manter somente os assets necessários à seçã
 
 Use a CLI como ponto de partida, não como autorização para entregar um clone quebrado.
 
-Antes da primeira publicação no npm, execute na raiz do repositório:
+Para usar o código-fonte deste repositório em vez do pacote publicado, execute na raiz do repositório:
 
 ```sh
 npm ci

@@ -2,6 +2,10 @@
 
 Notable changes are documented here. Versions follow Semantic Versioning.
 
+## [Unreleased]
+
+Nothing changed yet. Add entries here as work lands; the release procedure dates and publishes them in a release pull request.
+
 ## [0.1.1] — 2026-10-01
 
 ### Fixed

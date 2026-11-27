@@ -1,4 +1,6 @@
-# UIport 0.1 support matrix
+# UIport support matrix
+
+This matrix describes the 0.1.x CLI line and was last verified against 0.1.1. It applies to every 0.1.x release unless a row says otherwise.
 
 UIport exports a rendered section or a selected whole page. It does not reconstruct a complete application backend or crawl a site. A successful capture is not a general proof of fidelity.
 
