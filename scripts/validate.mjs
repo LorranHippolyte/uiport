@@ -12,25 +12,23 @@ import {
   startStaticServer,
   waitForPageStable,
 } from "./lib.mjs";
-function canvas(width, height) {
-  const png = new PNG({ width, height, fill: true });
-  png.data.fill(0);
-  return png;
-}
-
-function copy(source, destination) {
+// Copy a decoded PNG into a buffer of the comparison size, padding the rows
+// that the source does not cover with transparent pixels. The copy happens one
+// row at a time: a per-pixel copy costs one Buffer.copy call per pixel.
+function copy(source, destination, width) {
+  const bytesPerPixel = 4;
+  const rowBytes = source.width * bytesPerPixel;
   for (let y = 0; y < source.height; y += 1) {
-    for (let x = 0; x < source.width; x += 1) {
-      const sourceIndex = (source.width * y + x) << 2;
-      const destinationIndex = (destination.width * y + x) << 2;
-      source.data.copy(
-        destination.data,
-        destinationIndex,
-        sourceIndex,
-        sourceIndex + 4,
-      );
-    }
+    const sourceStart = y * rowBytes;
+    const destinationStart = y * width * bytesPerPixel;
+    source.data.copy(
+      destination,
+      destinationStart,
+      sourceStart,
+      sourceStart + rowBytes,
+    );
   }
+  return destination;
 }
 
 export async function validate(options) {
@@ -151,18 +149,23 @@ export async function validate(options) {
           height = Math.max(sourcePng.height, localPng.height);
         if (width * height > 20_000_000)
           throw new Error("Comparison exceeds screenshot limit");
-        const left = canvas(width, height),
-          right = canvas(width, height);
-        copy(sourcePng, left);
-        copy(localPng, right);
-        const differentPixels = pixelmatch(
-          left.data,
-          right.data,
-          null,
-          width,
-          height,
-          { threshold: 0.1, includeAA: false },
-        );
+        // When both sides have the same size their decoded pixels are already
+        // the comparison buffer: no padding copy is needed.
+        const sameSize =
+          sourcePng.width === localPng.width &&
+          sourcePng.height === localPng.height;
+        let left, right;
+        if (sameSize) {
+          left = sourcePng.data;
+          right = localPng.data;
+        } else {
+          left = copy(sourcePng, new Uint8Array(width * height * 4), width);
+          right = copy(localPng, new Uint8Array(width * height * 4), width);
+        }
+        const differentPixels = pixelmatch(left, right, null, width, height, {
+          threshold: 0.1,
+          includeAA: false,
+        });
         const differenceRatio = differentPixels / (width * height);
         const dimensionsMatch =
           sourcePng.width === localPng.width &&

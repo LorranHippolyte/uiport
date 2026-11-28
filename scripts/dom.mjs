@@ -219,85 +219,6 @@ export function extractSection({
     ancestor = ancestor.parentElement;
   }
 
-  const references = [];
-  const referenceKeys = new Set();
-  const addReference = (kind, value, ownerId, base = document.baseURI) => {
-    if (!value || /^(data:|#|javascript:|mailto:|tel:)/i.test(value.trim()))
-      return;
-    const url = absoluteUrl(value, base);
-    const key = `${kind}|${url}`;
-    if (!referenceKeys.has(key)) {
-      referenceKeys.add(key);
-      references.push({ kind, url, ownerId });
-    }
-  };
-  const urlsFromCss = (kind, value, ownerId) => {
-    for (const match of String(value || "").matchAll(
-      /url\(\s*['"]?([^'")]+)['"]?\s*\)/gi,
-    ))
-      addReference(kind, match[1], ownerId);
-  };
-
-  const usedFontFamilies = new Set();
-  for (const element of deepElements) {
-    const ownerId = element.getAttribute("data-uiport-id");
-    if (["SCRIPT", "IFRAME", "OBJECT", "EMBED"].includes(element.tagName))
-      continue;
-    if (element.hasAttribute("srcset")) {
-      const srcset = element.getAttribute("srcset");
-      if (!srcset.trim().startsWith("data:"))
-        for (const candidate of srcset.split(","))
-          addReference(
-            "srcset",
-            candidate.trim().split(/\s+/)[0],
-            ownerId,
-            element.baseURI,
-          );
-    }
-    for (const attribute of [
-      "src",
-      "poster",
-      "data-src",
-      "data-background-image",
-    ])
-      addReference(
-        attribute,
-        element.getAttribute(attribute),
-        ownerId,
-        element.baseURI,
-      );
-    if (element instanceof HTMLImageElement && element.currentSrc)
-      addReference("currentSrc", element.currentSrc, ownerId);
-    if (element instanceof SVGUseElement)
-      addReference(
-        "svg-use",
-        element.getAttribute("href") || element.getAttribute("xlink:href"),
-        ownerId,
-        element.baseURI,
-      );
-    const style = getComputedStyle(element);
-    usedFontFamilies.add(style.fontFamily);
-    for (const property of [
-      "background-image",
-      "mask-image",
-      "border-image-source",
-      "list-style-image",
-      "cursor",
-    ]) {
-      urlsFromCss(property, style.getPropertyValue(property), ownerId);
-    }
-    for (const pseudoName of ["::before", "::after", "::marker"]) {
-      const pseudo = getComputedStyle(element, pseudoName);
-      for (const property of ["background-image", "mask-image", "content"]) {
-        urlsFromCss(
-          `${pseudoName}:${property}`,
-          pseudo.getPropertyValue(property),
-          ownerId,
-        );
-      }
-    }
-  }
-
   const stylesheets = [
     ...document.styleSheets,
     ...document.adoptedStyleSheets,
@@ -318,13 +239,6 @@ export function extractSection({
       text,
     };
   });
-
-  const customProperties = {};
-  const rootStyle = getComputedStyle(target);
-  for (const property of rootStyle) {
-    if (property.startsWith("--"))
-      customProperties[property] = rootStyle.getPropertyValue(property);
-  }
 
   const animations = [];
   const seen = new Set();
@@ -410,10 +324,7 @@ export function extractSection({
       (attribute) => attribute.name !== "lang",
     ),
     bodyAttributes: attributesOf(document.body),
-    references,
-    usedFontFamilies: [...usedFontFamilies],
     stylesheets,
-    customProperties,
     animations,
     featureCounts: {
       elements: deepElements.length,

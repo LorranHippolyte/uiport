@@ -106,15 +106,23 @@ export function contextualCss(stylesheets) {
     flush();
   }
   for (const root of roots) visit(root, null);
+  // The index is keyed by rule and selector so that rendering does not
+  // rescan every observation for each selector.
   const missing = new Map();
+  const observations = new Map();
   return {
     async observe(page, snapshot) {
       const result = await page.evaluate(missingSelectors, {
         snapshot,
         rules: descriptors,
       });
-      for (const item of result)
+      for (const item of result) {
         missing.set(`${item.rule}|${item.selector}|${item.id}`, item);
+        const key = `${item.rule}|${item.selector}`;
+        const ids = observations.get(key) || new Set();
+        ids.add(item.id);
+        observations.set(key, ids);
+      }
     },
     render() {
       const anchorFor = (container) => {
@@ -139,11 +147,9 @@ export function contextualCss(stylesheets) {
         const anchor = anchorFor(original);
         if (!affected.has(anchor)) continue;
         const selectors = descriptors[id].selectors.map((selector) => {
-          const elements = [...missing.values()].filter(
-            (item) => item.rule === id && item.selector === selector,
-          );
-          return elements.length
-            ? `:is(${selector}, :where(${elements.map((item) => `[data-uiport-id="${item.id}"]`).join(", ")}))`
+          const ids = observations.get(`${id}|${selector}`);
+          return ids?.size
+            ? `:is(${selector}, :where(${[...ids].map((elementId) => `[data-uiport-id="${elementId}"]`).join(", ")}))`
             : selector;
         });
         let fallback = postcss.rule({ selector: selectors.join(", ") });

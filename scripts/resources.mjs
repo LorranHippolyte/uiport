@@ -20,81 +20,116 @@ export function resources(
   limitations,
   browserCache,
 ) {
+  // A pending download is stored as its promise so that concurrent requests
+  // for the same URL share one transfer.
   const downloaded = new Map();
+  const localized = new Map();
+  const written = new Map();
   let consumed = 0;
   const localPaths = new Set();
+  const maxConcurrentDownloads = 8;
+  let activeDownloads = 0;
+  const waitingDownloads = [];
+  // Bytes received from the network count against the total budget as they
+  // arrive. The check and the reservation happen in the same synchronous step,
+  // so concurrent transfers cannot pass the limit together.
+  function consume(bytes) {
+    if (consumed + bytes > options.maxTotalBytes)
+      throw new Error("Resource size limit exceeded");
+    consumed += bytes;
+  }
+  async function acquireDownloadSlot() {
+    if (activeDownloads < maxConcurrentDownloads) {
+      activeDownloads++;
+      return;
+    }
+    await new Promise((resolve) => waitingDownloads.push(resolve));
+  }
+  function releaseDownloadSlot() {
+    const next = waitingDownloads.shift();
+    if (next) next();
+    else activeDownloads--;
+  }
   /** @param {string} input */
   async function download(input) {
     const url = normalizeUrl(input);
     if (downloaded.has(url)) return downloaded.get(url);
     if (!/^https?:/i.test(url)) return null;
-    let response;
-    try {
-      if (consumed >= options.maxTotalBytes)
-        throw new Error("Total resource budget exceeded");
-      const cached = await browserCache?.get(url);
-      if (cached) {
-        if (
-          cached.body.length > options.maxResourceBytes ||
-          consumed + cached.body.length > options.maxTotalBytes
-        )
-          throw new Error("Resource size limit exceeded");
-        consumed += cached.body.length;
-        downloaded.set(url, cached);
-        return cached;
+    const pending = (async () => {
+      let response;
+      try {
+        if (consumed >= options.maxTotalBytes)
+          throw new Error("Total resource budget exceeded");
+        const cached = await browserCache?.get(url);
+        if (cached) {
+          if (cached.body.length > options.maxResourceBytes)
+            throw new Error("Resource size limit exceeded");
+          consume(cached.body.length);
+          return cached;
+        }
+        await acquireDownloadSlot();
+        try {
+          response = await fetch(url, {
+            signal: AbortSignal.any([
+              signal,
+              AbortSignal.timeout(Math.min(options.timeoutMs, 15000)),
+            ]),
+            headers: { "user-agent": "UIport/0.1" },
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const length = Number(response.headers.get("content-length") || 0);
+          if (
+            length > options.maxResourceBytes ||
+            length + consumed > options.maxTotalBytes
+          )
+            throw new Error("Resource size limit exceeded");
+          const chunks = [];
+          let size = 0;
+          for await (const chunk of /** @type {any} */ (response.body)) {
+            size += chunk.length;
+            consume(chunk.length);
+            if (size > options.maxResourceBytes)
+              throw new Error("Resource size limit exceeded");
+            chunks.push(chunk);
+          }
+          const resource = {
+            body: Buffer.concat(chunks),
+            contentType: response.headers.get("content-type") || "",
+            url: response.url || url,
+          };
+          return resource;
+        } finally {
+          releaseDownloadSlot();
+        }
+      } catch (error) {
+        signal.throwIfAborted();
+        limitation(
+          limitations,
+          "RESOURCE_UNAVAILABLE",
+          `${redactedUrl(url)}: ${safeErrorMessage(error)}`,
+        );
+        return null;
+      } finally {
+        if (response?.body && !response.body.locked)
+          await response.body.cancel().catch(() => {});
       }
-      response = await fetch(url, {
-        signal: AbortSignal.any([
-          signal,
-          AbortSignal.timeout(Math.min(options.timeoutMs, 15000)),
-        ]),
-        headers: { "user-agent": "UIport/0.1" },
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const length = Number(response.headers.get("content-length") || 0);
-      if (
-        length > options.maxResourceBytes ||
-        length + consumed > options.maxTotalBytes
-      )
-        throw new Error("Resource size limit exceeded");
-      const chunks = [];
-      let size = 0;
-      for await (const chunk of /** @type {any} */ (response.body)) {
-        size += chunk.length;
-        consumed += chunk.length;
-        if (size > options.maxResourceBytes || consumed > options.maxTotalBytes)
-          throw new Error("Resource size limit exceeded");
-        chunks.push(chunk);
-      }
-      const resource = {
-        body: Buffer.concat(chunks),
-        contentType: response.headers.get("content-type") || "",
-        url: response.url || url,
-      };
-      downloaded.set(url, resource);
-      return resource;
-    } catch (error) {
-      signal.throwIfAborted();
-      limitation(
-        limitations,
-        "RESOURCE_UNAVAILABLE",
-        `${redactedUrl(url)}: ${safeErrorMessage(error)}`,
-      );
-      downloaded.set(url, null);
-      return null;
-    } finally {
-      if (response?.body && !response.body.locked)
-        await response.body.cancel().catch(() => {});
-    }
+    })();
+    downloaded.set(url, pending);
+    return pending;
   }
   /** @param {string} raw @param {string} base @param {string} [usage] */
   async function localize(raw, base, usage) {
-    if (
-      !raw ||
-      /^(data:|#)/i.test(raw) ||
-      localPaths.has(raw.split("#")[0].replace(/^\.\//, ""))
-    )
-      return raw;
+    if (!raw || /^(data:|#)/i.test(raw)) return raw;
+    // The usage decides the file extension, so it belongs to the key.
+    const key = `${base}|${raw}|${usage || ""}`;
+    if (localized.has(key)) return localized.get(key);
+    const pending = localizeResource(raw, base, usage);
+    localized.set(key, pending);
+    return pending;
+  }
+  /** @param {string} raw @param {string} base @param {string} [usage] */
+  async function localizeResource(raw, base, usage) {
+    if (localPaths.has(raw.split("#")[0].replace(/^\.\//, ""))) return raw;
     let url;
     try {
       url = new URL(raw, base);
@@ -123,14 +158,22 @@ export function resources(
     )
       extension = ".js";
     const file = `assets/${sha256(resource.body).slice(0, 24)}${extension}`;
-    if (!localPaths.has(file)) {
-      await fs.writeFile(path.join(directory, file), resource.body);
-      localPaths.add(file);
-    }
+    // Two different URLs can carry the same bytes and therefore the same file
+    // name. One shared write keeps the file intact, and every caller waits
+    // for that write before the export is assembled.
+    if (!written.has(file))
+      written.set(
+        file,
+        fs.writeFile(path.join(directory, file), resource.body),
+      );
+    await written.get(file);
+    localPaths.add(file);
     return `./${file}${url.hash}`;
   }
   /** @param {string} value @param {string} base */
   async function cssValue(value, base) {
+    // Most declarations carry no URL at all: parsing them is wasted work.
+    if (!/url\(|image-set\(/i.test(value)) return value;
     const parsed = valueParser(value);
     const nodes = [];
     parsed.walk((node) => {
@@ -245,8 +288,18 @@ export function resources(
       rule.replaceWith(postcss.parse(body).nodes);
     }
     // Imported declarations have already been rewritten against their own base.
-    for (const decl of declarations)
-      decl.value = await cssValue(decl.value, base);
+    // Each declaration is independent, so the resources they reference are
+    // localized concurrently. A cancellation must not leave sibling
+    // rejections unhandled.
+    const rewritten = await Promise.allSettled(
+      declarations.map((decl) =>
+        cssValue(decl.value, base).then((value) => {
+          decl.value = value;
+        }),
+      ),
+    );
+    const failure = rewritten.find((entry) => entry.status === "rejected");
+    if (failure) throw failure.reason;
     root.walkComments((comment) => {
       if (/sourceMappingURL/.test(comment.text)) comment.remove();
     });

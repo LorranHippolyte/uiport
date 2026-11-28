@@ -18,7 +18,7 @@ flowchart LR
 - `scripts/options.mjs`: strict arguments, URL/number/viewport validation.
 - `scripts/capture.mjs`: capture orchestration, staged filesystem output, metadata and exact-data WAAPI replay.
 - `scripts/dom.mjs`: browser-side DOM serialization; preserves source scripts/handlers by default (explicit --omit-scripts opt-out), supports section/body/html roots, handles open shadow trees, records styles and animation data.
-- `scripts/resources.mjs`: streamed size/deadline limits, hash-named assets, PostCSS import processing and URL rewriting. Responses from the capture browser are preferred; independent HTTP fetch is a fallback. No personal browser session is imported.
+- `scripts/resources.mjs`: streamed size/deadline limits, hash-named assets, PostCSS import processing and URL rewriting. Responses from the capture browser are preferred; independent HTTP fetch is a fallback. Referenced assets are fetched concurrently through a bounded pool that shares the total budget. No personal browser session is imported.
 - `scripts/browser-resources.mjs`: bounded retention of response bodies and redirect aliases from the fresh source context; Playwright body materialization is not a streaming memory limit.
 - `scripts/css-context.mjs`: restores custom-property declarations whose selectors lost structural context, preserving their specificity, order and enclosing conditions instead of freezing computed viewport values.
 - `scripts/validate.mjs`: isolated source/output contexts, screenshot comparison, resource and execution diagnostics. Does not infer behavioral equivalence.

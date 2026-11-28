@@ -139,3 +139,68 @@ test("image-set localizes string and url candidates without rewriting MIME type 
   assert.ok(limitations.some((entry) => entry.code === "RESOURCE_UNAVAILABLE"));
   assert.equal(assets.stats().assets, 2);
 });
+
+test("resources referenced by different declarations are downloaded concurrently", async (t) => {
+  let inFlight = 0;
+  let peak = 0;
+  const { assets, url } = await setup(t, async (req, res) => {
+    inFlight++;
+    peak = Math.max(peak, inFlight);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    inFlight--;
+    res.writeHead(200, { "content-type": "image/svg+xml" });
+    // Distinct bodies keep the content-addressed file names distinct.
+    res.end(
+      `<svg xmlns="http://www.w3.org/2000/svg"><title>${req.url}</title></svg>`,
+    );
+  });
+  const css = await assets.css(
+    `.a{background:url("a.svg")}.b{background:url("b.svg")}.c{background:url("c.svg")}.d{background:url("d.svg")}`,
+    `${url}/index.html`,
+  );
+  assert.match(css, /\.\/assets\/.*\.svg/);
+  assert.ok(peak > 1, `expected concurrent transfers, saw ${peak}`);
+  assert.equal(assets.stats().assets, 4);
+});
+
+test("the total budget is respected when resources are downloaded concurrently", async (t) => {
+  const { assets, url, limitations } = await setup(
+    t,
+    (_req, res) => {
+      res.writeHead(200, { "content-type": "image/svg+xml" });
+      res.end("x".repeat(700));
+    },
+    { "max-total-mb": "0.001" },
+  );
+  const results = await Promise.all(
+    ["a", "b", "c", "d"].map((name) =>
+      assets.localize(`${url}/${name}.svg`, url),
+    ),
+  );
+  const exported = results.filter((value) => value.startsWith("./assets/"));
+  assert.ok(exported.length >= 1);
+  assert.ok(exported.length < results.length);
+  assert.ok(
+    assets.stats().downloadedBytes <= 0.001 * 1024 * 1024,
+    "the total budget must not be exceeded by concurrent transfers",
+  );
+  assert.ok(limitations.some((entry) => entry.code === "RESOURCE_UNAVAILABLE"));
+});
+
+test("the same URL is downloaded once even when requested concurrently", async (t) => {
+  let requests = 0;
+  const { assets, url } = await setup(t, async (_req, res) => {
+    requests++;
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    res.writeHead(200, { "content-type": "image/svg+xml" });
+    res.end('<svg xmlns="http://www.w3.org/2000/svg"/>');
+  });
+  const results = await Promise.all(
+    ["#one", "#two", "#three"].map((fragment) =>
+      assets.localize(`${url}/same.svg${fragment}`, url),
+    ),
+  );
+  assert.equal(requests, 1);
+  assert.equal(new Set(results.map((value) => value.split("#")[0])).size, 1);
+  assert.equal(assets.stats().assets, 1);
+});
