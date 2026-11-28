@@ -147,16 +147,21 @@ export async function stageOutput(directory) {
 
 export async function waitForPageStable(page, settleMs) {
   await page.waitForLoadState("domcontentloaded");
-  await page.waitForLoadState("networkidle", { timeout: 2000 }).catch(() => {});
-  await page.evaluate(async () => {
-    await Promise.race([
-      Promise.all([
-        document.fonts?.ready,
-        ...[...document.images].map((img) => img.decode?.().catch(() => {})),
-      ]),
-      new Promise((resolve) => setTimeout(resolve, 2000)),
-    ]);
-  });
+  // The network idle window and the font/image decoding wait for the same
+  // thing. Running them concurrently keeps the guarantee that both settle
+  // before the fixed settle time, without paying for them one after another.
+  await Promise.all([
+    page.waitForLoadState("networkidle", { timeout: 2000 }).catch(() => {}),
+    page.evaluate(async () => {
+      await Promise.race([
+        Promise.all([
+          document.fonts?.ready,
+          ...[...document.images].map((img) => img.decode?.().catch(() => {})),
+        ]),
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ]);
+    }),
+  ]);
   await page.waitForTimeout(settleMs);
 }
 

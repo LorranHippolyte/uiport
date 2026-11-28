@@ -9,6 +9,13 @@ Notable changes are documented here. Versions follow Semantic Versioning.
 - Preserve an unparsable `srcset` unchanged and report `SRCSET_INVALID`, instead of dropping the attribute silently and changing which image the browser picks.
 - Report a selected root that does not render (`SECTION_NOT_VISIBLE`, `SECTION_EMPTY_AREA`) instead of waiting for a screenshot that cannot succeed, and refuse it during validation with an actionable message.
 - Document `INVALID_RESOURCE_URL` in the support matrix.
+- Enforce the total resource budget across concurrent transfers instead of counting the bytes of a rejected transfer.
+
+### Changed
+- Download the resources referenced by a section concurrently, with a bounded pool of eight transfers. The total budget, the per-resource limit and the exported files stay the same; a capture of forty assets over a 100 ms round trip went from 8.1 s to 4.5 s.
+- Compare the source and the export without copying pixels one by one: when both sides have the same size their decoded pixels are compared directly. Validating a 20-megapixel section went from 7.9 s to 7.0 s and from 618 MB to 529 MB of resident memory.
+- Collect in the browser only what the export uses. The per-element computed styles, the custom property snapshot and the font list were collected for every element and never read.
+- Wait for the network and for the fonts and images at the same time, and localize the assets of the document concurrently.
 
 ## [0.1.1] — 2026-10-01
 

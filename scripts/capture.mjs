@@ -199,7 +199,30 @@ export async function capture(options) {
       })
       .join("\n");
     const head = parseFragment(runtimeHtml + primary.headHtml);
-    async function rewrite(node) {
+    // Every referenced resource is localized concurrently and the document is
+    // assembled once all of them are known. The download pool inside the
+    // resource layer bounds how many transfers run at the same time.
+    const pending = [];
+    const localizeSrcset = async (value) => {
+      const parsed = parseSrcsetAttribute(value);
+      if (!parsed.length && value.trim()) {
+        // An unparsable descriptor list is preserved unchanged: dropping it
+        // would silently change which image the browser picks.
+        limitation(
+          limitations,
+          "SRCSET_INVALID",
+          "A srcset attribute could not be parsed and was preserved unchanged",
+        );
+        return value;
+      }
+      const candidates = [];
+      for (const item of parsed)
+        candidates.push(
+          `${await assets.localize(item.url, primary.baseUrl)}${item.w ? ` ${item.w}w` : item.d ? ` ${item.d}x` : ""}`,
+        );
+      return candidates.join(", ");
+    };
+    function rewrite(node) {
       if (node.attrs) {
         for (const attr of node.attrs) {
           if (
@@ -208,48 +231,70 @@ export async function capture(options) {
             ) ||
             (["use", "image"].includes(node.tagName) &&
               ["href", "xlink:href"].includes(attr.name))
-          )
-            attr.value = await assets.localize(
-              attr.value,
-              primary.baseUrl,
-              node.tagName === "script" && attr.name === "src"
-                ? "script"
-                : undefined,
+          ) {
+            const original = attr.value;
+            pending.push(
+              assets
+                .localize(
+                  original,
+                  primary.baseUrl,
+                  node.tagName === "script" && attr.name === "src"
+                    ? "script"
+                    : undefined,
+                )
+                .then((value) => {
+                  attr.value = value;
+                }),
             );
-          if (attr.name === "srcset") {
-            const parsed = parseSrcsetAttribute(attr.value);
-            if (!parsed.length && attr.value.trim()) {
-              // An unparsable descriptor list is preserved unchanged: dropping
-              // it would silently change which image the browser picks.
-              limitation(
-                limitations,
-                "SRCSET_INVALID",
-                "A srcset attribute could not be parsed and was preserved unchanged",
-              );
-            } else {
-              const candidates = [];
-              for (const item of parsed)
-                candidates.push(
-                  `${await assets.localize(item.url, primary.baseUrl)}${item.w ? ` ${item.w}w` : item.d ? ` ${item.d}x` : ""}`,
-                );
-              attr.value = candidates.join(", ");
-            }
           }
-          if (attr.name === "style")
-            attr.value = await assets.cssValue(attr.value, primary.baseUrl);
+          if (attr.name === "srcset") {
+            const original = attr.value;
+            pending.push(
+              localizeSrcset(original).then((value) => {
+                attr.value = value;
+              }),
+            );
+          }
+          if (attr.name === "style") {
+            const original = attr.value;
+            pending.push(
+              assets.cssValue(original, primary.baseUrl).then((value) => {
+                attr.value = value;
+              }),
+            );
+          }
         }
       }
       if (node.tagName === "style")
         for (const child of node.childNodes || [])
-          if (child.nodeName === "#text")
-            child.value = await assets.css(child.value, primary.baseUrl);
-      for (const child of node.childNodes || []) await rewrite(child);
-      if (node.content) await rewrite(node.content);
+          if (child.nodeName === "#text") {
+            const original = child.value;
+            pending.push(
+              assets.css(original, primary.baseUrl).then((value) => {
+                child.value = value;
+              }),
+            );
+          }
+      for (const child of node.childNodes || []) rewrite(child);
+      if (node.content) rewrite(node.content);
     }
-    await rewrite(fragment);
-    await rewrite(head);
-    await rewrite({ attrs: primary.htmlAttributes });
-    await rewrite({ attrs: primary.bodyAttributes });
+    rewrite(fragment);
+    rewrite(head);
+    rewrite({ attrs: primary.htmlAttributes });
+    rewrite({ attrs: primary.bodyAttributes });
+    // Every pending localization settles before the document is assembled. A
+    // cancellation must not leave sibling rejections unhandled.
+    const settled = await Promise.allSettled(pending);
+    const failure = settled.find((entry) => entry.status === "rejected");
+    if (failure) throw failure.reason;
+    // Resources are localized concurrently, so the order in which problems
+    // are observed is not stable. Sorting keeps the reported result
+    // reproducible from one run to the next.
+    limitations.sort((a, b) =>
+      a.code === b.code
+        ? a.message.localeCompare(b.message)
+        : a.code.localeCompare(b.code),
+    );
     // Context-dependent custom properties retain their original conditions;
     // ordinary inherited/responsive variables are never frozen to one viewport.
     const animations = primary.animations.filter(
