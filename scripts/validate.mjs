@@ -73,9 +73,13 @@ export async function validate(options) {
         if ((await root.count()) !== 1)
           throw new Error("Source selector is missing or ambiguous");
         const box = await root.boundingBox();
-        if (!box || box.width * box.height > 20_000_000)
+        if (!box || box.width <= 0 || box.height <= 0)
           throw new Error(
-            "Source section is empty or exceeds the 20 megapixel screenshot limit",
+            "The source selector does not render a visible box; choose a selector that matches a visible element",
+          );
+        if (box.width * box.height > 20_000_000)
+          throw new Error(
+            "Source section exceeds the 20 megapixel screenshot limit",
           );
         const sourceBuffer = await root.screenshot({
           animations: "disabled",
@@ -131,7 +135,11 @@ export async function validate(options) {
         if ((await localRoot.count()) !== 1)
           throw new Error("UIport extraction root is missing or ambiguous");
         const localBox = await localRoot.boundingBox();
-        if (!localBox || localBox.width * localBox.height > 20_000_000)
+        if (!localBox || localBox.width <= 0 || localBox.height <= 0)
+          throw new Error(
+            "The exported section does not render a visible box; the capture may have exported a hidden or empty root",
+          );
+        if (localBox.width * localBox.height > 20_000_000)
           throw new Error("Exported section exceeds screenshot limit");
         const localBuffer = await localRoot.screenshot({
           animations: "disabled",

@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright-core";
 import { parseFragment, serialize } from "parse5";
-import parseSrcset from "parse-srcset";
-import { extractSection } from "./dom.mjs";
+import { extractSection, measureRoot } from "./dom.mjs";
+import { parseSrcsetAttribute } from "./srcset.mjs";
 import { resources } from "./resources.mjs";
 import { browserResources } from "./browser-resources.mjs";
 import { contextualCss } from "./css-context.mjs";
@@ -91,7 +91,22 @@ export async function capture(options) {
         throw new Error(
           `Selector must resolve to exactly one element; found ${count}`,
         );
-      await root.scrollIntoViewIfNeeded();
+      // A root that does not render is reported instead of waiting for a
+      // screenshot that can never succeed.
+      const rendered = await page.evaluate(measureRoot, { selector });
+      if (!rendered.visible)
+        limitation(
+          limitations,
+          "SECTION_NOT_VISIBLE",
+          `The selected root is not visible at ${viewport.name}; its markup is exported but renders empty`,
+        );
+      else if (rendered.width <= 0 || rendered.height <= 0)
+        limitation(
+          limitations,
+          "SECTION_EMPTY_AREA",
+          `The selected root has no rendered size at ${viewport.name}; its markup is exported but renders empty`,
+        );
+      else await root.scrollIntoViewIfNeeded();
       const snapshot = await page.evaluate(extractSection, {
         selector,
         omitScripts: options.omitScripts,
@@ -202,12 +217,23 @@ export async function capture(options) {
                 : undefined,
             );
           if (attr.name === "srcset") {
-            const candidates = [];
-            for (const item of parseSrcset(attr.value))
-              candidates.push(
-                `${await assets.localize(item.url, primary.baseUrl)}${item.w ? ` ${item.w}w` : item.d ? ` ${item.d}x` : ""}`,
+            const parsed = parseSrcsetAttribute(attr.value);
+            if (!parsed.length && attr.value.trim()) {
+              // An unparsable descriptor list is preserved unchanged: dropping
+              // it would silently change which image the browser picks.
+              limitation(
+                limitations,
+                "SRCSET_INVALID",
+                "A srcset attribute could not be parsed and was preserved unchanged",
               );
-            attr.value = candidates.join(", ");
+            } else {
+              const candidates = [];
+              for (const item of parsed)
+                candidates.push(
+                  `${await assets.localize(item.url, primary.baseUrl)}${item.w ? ` ${item.w}w` : item.d ? ` ${item.d}x` : ""}`,
+                );
+              attr.value = candidates.join(", ");
+            }
           }
           if (attr.name === "style")
             attr.value = await assets.cssValue(attr.value, primary.baseUrl);

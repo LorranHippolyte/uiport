@@ -37,7 +37,7 @@ O objetivo da revisão manual é manter somente os assets necessários à seçã
 - Abra a URL em navegador com JavaScript habilitado.
 - Aguarde DOM, rede, fontes e imagens estabilizarem dentro de um prazo limitado; não espere indefinidamente por páginas com atividade contínua.
 - Role a página para ativar lazy loading e efeitos de entrada. Inspecione o diagnóstico se o limite de rolagem for atingido.
-- Localize uma única raiz que contenha toda a seção, incluindo elementos decorativos, overlays e backgrounds. O seletor deve encontrar uma única raiz. Use um container para uma seção, `body` para a página visível inteira ou `html` para incluir também os scripts do head; não se trata de crawling de múltiplas páginas.
+- Localize uma única raiz que contenha toda a seção, incluindo elementos decorativos, overlays e backgrounds. O seletor deve encontrar uma única raiz, e essa raiz precisa renderizar no viewport capturado. Use um container para uma seção, `body` para a página visível inteira ou `html` para incluir também os scripts do head; não se trata de crawling de múltiplas páginas.
 - Observe o estado inicial e todas as interações relevantes: entrada, scroll, hover, foco, tabs, accordion, carousel e mousemove.
 - Compare os tamanhos de tela necessários e mantenha viewport, idioma e tema consistentes entre captura e validação.
 
@@ -100,6 +100,8 @@ Leia o diagnóstico antes de entregar:
 - `--json`: resultado em stdout e progresso em stderr. Não confunda um artefato parcial com falha sem saída.
 
 O idioma padrão permanece `pt-BR`. `capture --omit-scripts` desativa a cópia de scripts da origem e eventos inline; nesse modo, animações WAAPI observadas continuam podendo ser reproduzidas. Sem essa opção, `SOURCE_RUNTIME_UNVERIFIED` pede inspeção do código preservado.
+
+A raiz escolhida precisa renderizar no viewport capturado. `SECTION_NOT_VISIBLE` e `SECTION_EMPTY_AREA` significam que o markup foi exportado, mas não exibe nada: corrija o seletor para um elemento visível ou capture a página inteira com `body`. `SRCSET_INVALID` significa que a lista de descritores do `srcset` não pôde ser interpretada; o valor original foi preservado, então confira qual imagem o navegador escolhe.
 
 Se houver runtime omitido ou não verificado, recurso não localizado, mudança estrutural responsiva ou canvas dinâmico, investigue a origem antes de concluir.
 

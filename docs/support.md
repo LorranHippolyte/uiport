@@ -38,13 +38,16 @@ Existing prototype exports are accepted by their legacy root marker; validate do
 - Viewports: 1–8, dimensions 200–3840 pixels. Screenshot comparisons capped at 20 megapixels.
 - Total operation: default 120 seconds, configurable 1–600 seconds. The deadline also covers browser startup; cancellation closes the owned browser process tree. Process cleanup can add a short shutdown interval. Source navigation is bounded; resource fetches have up to 15 seconds each.
 - Lazy scroll: default 80 steps, configurable 1–1000. `SCROLL_LIMIT` means content may remain unloaded.
+- The selected root must render at the captured viewport. A hidden or zero-sized root is reported as a partial result instead of failing the capture, and validation refuses it with an actionable message instead of waiting for a screenshot that can never succeed.
 - Export resource budget: default 20 MiB/file, 100 MiB total; controls downloaded copies, not source browser memory. Successful responses from the fresh capture context are reused, including Referer-dependent resources. Retention has the same per-file/aggregate budgets, but Playwright materializes response bodies before actual-size validation; peak memory is not bounded by these budgets. All referenced CSS resources may be retained, including resources unused by the selected DOM, because CSS is conservative.
 - Public HTTP(S) only; no session/cookie import. Local development URLs are supported. The capture reuses its own navigation responses; fallback fetch does not import browser cookies.
 - Source JavaScript executes in the capture browser. The optional --omit-scripts mode is not a general-purpose sanitizer or sandbox for hostile websites.
 - Source style values and content remain in the HTML. Review artifacts before redistribution. The CLI redacts URL credentials, queries and fragments in resource diagnostics and operational errors and does not print source page content or form values.
 - Network/rendering differences, DOM changed by runtime, special CSS/HTML features and states not observed can still require manual work. No invented replacement effects.
 
-Common partial-result codes: `SOURCE_RUNTIME_UNVERIFIED`, `SOURCE_RUNTIME_OMITTED`, `RESOURCE_UNAVAILABLE`, `STYLESHEET_UNAVAILABLE`, `SCROLL_LIMIT`, `RESPONSIVE_DOM_CHANGED`, `CANVAS_STATIC`, `CANVAS_UNREADABLE`, `EMBED_OMITTED`, `ANIMATION_UNSUPPORTED`, `SOURCE_REQUEST_FAILED`, `SOURCE_SCRIPT_ERROR`, `CSS_IMPORT_CYCLE`, `CSS_IMPORT_UNSUPPORTED`.
+Common partial-result codes: `SOURCE_RUNTIME_UNVERIFIED`, `SOURCE_RUNTIME_OMITTED`, `RESOURCE_UNAVAILABLE`, `INVALID_RESOURCE_URL`, `STYLESHEET_UNAVAILABLE`, `SRCSET_INVALID`, `SCROLL_LIMIT`, `RESPONSIVE_DOM_CHANGED`, `SECTION_NOT_VISIBLE`, `SECTION_EMPTY_AREA`, `CANVAS_STATIC`, `CANVAS_UNREADABLE`, `EMBED_OMITTED`, `ANIMATION_UNSUPPORTED`, `SOURCE_REQUEST_FAILED`, `SOURCE_SCRIPT_ERROR`, `CSS_IMPORT_CYCLE`, `CSS_IMPORT_UNSUPPORTED`.
+
+`SECTION_NOT_VISIBLE` and `SECTION_EMPTY_AREA` mean the selected root does not render at that viewport: its markup is still exported, but it displays nothing. Choose a selector that matches a visible element, or capture the whole page with `body`. `SRCSET_INVALID` means a `srcset` descriptor list could not be parsed; the original value is preserved unchanged instead of being dropped, so check which image the browser picks. `INVALID_RESOURCE_URL` means a resource URL could not be resolved and was left as it was.
 
 ## Supported environments
 
