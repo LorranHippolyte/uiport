@@ -103,7 +103,19 @@ try {
     } else {
       const options = optionsFor(command, args);
       const { [command]: run } = await import(`../scripts/${command}.mjs`);
-      const result = await run(options);
+      // A capture or a validation writes exactly one JSON document to stdout.
+      // Anything a dependency prints meanwhile goes to stderr, so automation
+      // can always parse stdout.
+      const stdoutWrite = process.stdout.write;
+      if (command === "capture" || command === "validate")
+        process.stdout.write = (chunk, encoding, callback) =>
+          process.stderr.write(chunk, encoding, callback);
+      let result;
+      try {
+        result = await run(options);
+      } finally {
+        process.stdout.write = stdoutWrite;
+      }
       if (command !== "serve")
         console.log(JSON.stringify(result, null, args.json ? undefined : 2));
       process.exitCode =

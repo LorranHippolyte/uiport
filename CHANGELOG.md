@@ -4,7 +4,11 @@ Notable changes are documented here. Versions follow Semantic Versioning.
 
 ## [Unreleased]
 
-Nothing changed yet. Add entries here as work lands; the release procedure dates and publishes them in a release pull request.
+### Fixed
+- Keep stdout clean: a capture or a validation writes exactly one JSON document, and anything a dependency prints meanwhile goes to the diagnostics channel.
+- Preserve an unparsable `srcset` unchanged and report `SRCSET_INVALID`, instead of dropping the attribute silently and changing which image the browser picks.
+- Report a selected root that does not render (`SECTION_NOT_VISIBLE`, `SECTION_EMPTY_AREA`) instead of waiting for a screenshot that cannot succeed, and refuse it during validation with an actionable message.
+- Document `INVALID_RESOURCE_URL` in the support matrix.
 
 ## [0.1.1] — 2026-10-01
 

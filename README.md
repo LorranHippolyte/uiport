@@ -31,7 +31,7 @@ npx uiport@0.1.1 serve --dir ./my-section
 npx uiport@0.1.1 validate --url "https://your-site.example" --selector "#hero" --dir ./my-section
 ```
 
-Choose the selector using your browser's **Inspect element** tool. It must match exactly one container, such as `main`, `section` or a `div`. Use `body` to capture the whole visible page, or `html` to include original head scripts as well. This captures one page, not a multi-page crawl.
+Choose the selector using your browser's **Inspect element** tool. It must match exactly one container, such as `main`, `section` or a `div`, and that container must be visible at the captured viewport: a hidden or zero-sized root is reported as a partial result because it renders nothing. Use `body` to capture the whole visible page, or `html` to include original head scripts as well. This captures one page, not a multi-page crawl.
 
 For repeated use: `npm install -g uiport`, then `uiport --help`. Pin a version for repeatable captures; `npx uiport@latest` follows future releases.
 

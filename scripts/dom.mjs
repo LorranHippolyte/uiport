@@ -1,4 +1,19 @@
 // Runs inside the source browser. No Node state is captured by this function.
+export function measureRoot({ selector: targetSelector }) {
+  const element = document.querySelector(targetSelector);
+  if (!element) return { visible: false, width: 0, height: 0 };
+  const style = getComputedStyle(element);
+  const rect = element.getBoundingClientRect();
+  return {
+    visible:
+      element.getClientRects().length > 0 &&
+      style.visibility !== "hidden" &&
+      style.display !== "none",
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
 export function extractSection({
   selector: targetSelector,
   omitScripts = false,

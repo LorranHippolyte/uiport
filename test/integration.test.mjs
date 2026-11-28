@@ -1,52 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright-core";
 import { startStaticServer } from "../scripts/lib.mjs";
-import { cli, result, project } from "./helpers.mjs";
+import {
+  captureArgs,
+  cli,
+  fixture,
+  local,
+  project,
+  result,
+  validateArgs,
+} from "./helpers.mjs";
 
 const viewports = "1440x900,1024x768,768x1024,375x812";
-async function fixture(t) {
-  const temp = await fs.mkdtemp(path.join(os.tmpdir(), "uiport-integration-"));
-  t.after(() => fs.rm(temp, { recursive: true, force: true }));
-  return temp;
-}
-async function local(t, dir) {
-  const server = await startStaticServer(dir);
-  t.after(server.close);
-  return server;
-}
-const captureArgs = (url, out, selector = "#hero", views = "800x600") => [
-  "capture",
-  "--url",
-  url,
-  "--selector",
-  selector,
-  "--out",
-  out,
-  "--viewports",
-  views,
-  "--wait",
-  "0",
-  "--json",
-];
-const validateArgs = (url, out, selector = "#hero", views = "800x600") => [
-  "validate",
-  "--url",
-  url,
-  "--selector",
-  selector,
-  "--dir",
-  out,
-  "--viewports",
-  views,
-  "--wait",
-  "0",
-  "--json",
-];
 
 test(
   "image-set in inline, stylesheet and imported CSS remains portable offline",

@@ -31,7 +31,7 @@ npx uiport@0.1.1 serve --dir ./minha-secao
 npx uiport@0.1.1 validate --url "https://seu-site.example" --selector "#hero" --dir ./minha-secao
 ```
 
-Para escolher o seletor, use **Inspecionar elemento** no navegador. Ele precisa encontrar exatamente um container, como `main`, `section` ou `div`. Use `body` para capturar a página visível completa ou `html` para incluir também scripts originais do head. Isso captura uma página, sem percorrer automaticamente outras URLs do site.
+Para escolher o seletor, use **Inspecionar elemento** no navegador. Ele precisa encontrar exatamente um container, como `main`, `section` ou `div`, e esse container precisa estar visível no tamanho de tela capturado: uma raiz oculta ou sem área é relatada como resultado parcial, porque não renderiza nada. Use `body` para capturar a página visível completa ou `html` para incluir também scripts originais do head. Isso captura uma página, sem percorrer automaticamente outras URLs do site.
 
 Para uso frequente: `npm install -g uiport`, depois `uiport --help`. Fixe uma versão quando precisar reproduzir uma captura; `npx uiport@latest` acompanha versões futuras.
 
